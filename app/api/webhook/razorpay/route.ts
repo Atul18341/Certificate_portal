@@ -3,11 +3,11 @@ import { createClient } from "@supabase/supabase-js";
 import crypto from "crypto";
 
 const SUPABASE_URL = "https://jxflprsskwefwnbhhsxp.supabase.co";
-const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "sb_secret_tTMQHO2npXNyQBP7ZCS-zA_lurgciNW";
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
 // 🔥 Security Secret: Razorpay dashboard me jo webhook secret set karoge, wo yahan ayega
-const RAZORPAY_WEBHOOK_SECRET = process.env.RAZORPAY_WEBHOOK_SECRET || "my_super_secret_webhook_123";
+const RAZORPAY_WEBHOOK_SECRET = process.env.RAZORPAY_WEBHOOK_SECRET !;
 
 export async function POST(request: Request) {
   try {
