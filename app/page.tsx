@@ -1,7 +1,8 @@
 'use check-clean';
 'use client';
-
+import LinkedInButton from "@/components/LinkedInButton";
 import React, { useState, useEffect, useRef } from 'react';
+
 import Script from "next/script";
 import * as XLSX from 'xlsx';
 import html2canvas from 'html2canvas';
@@ -165,6 +166,51 @@ export default function CredVantageApp() {
     setActiveTab('workspace');
   };
 
+  // 📧 Email Dispatch Handler (STEP 2: Auto-detect and send only to valid email holders)
+  const handleSendBulkEmails = async () => {
+    // Filter only students with a non-empty, valid email containing '@'
+    const validStudents = studentsList.filter(s => s.email && s.email.trim() !== '' && s.email.includes('@'));
+
+    if (validStudents.length === 0) {
+      alert("⚠️ Spreadsheet mein kisi bhi student ki valid Email ID nahi mili!");
+      return;
+    }
+
+    setIsProcessing(true);
+    setProgressStatus(`Dispatching certificate emails to ${validStudents.length} recipient(s)...`);
+
+    try {
+      const payload = validStudents.map((student) => ({
+        email: student.email,
+        name: student.name,
+        certificateId: student.id,
+        certificateUrl: `https://credvantage.com/verify/${encodeURIComponent(student.id)}`,
+      }));
+
+      const response = await fetch("/api/send-certificates", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          students: payload,
+          organizationName: orgDisplayName,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        alert(`🎉 Successfully sent certificate email(s) to ${validStudents.length} student(s)!`);
+      } else {
+        alert(`❌ Error sending emails: ${data.error}`);
+      }
+    } catch (err: any) {
+      alert("Failed to send emails. Make sure your RESEND_API_KEY is configured.");
+    } finally {
+      setIsProcessing(false);
+      setProgressStatus('');
+    }
+  };
+
   // Real User Wallet Top-Up via Razorpay
   const handleWalletTopUp = async (amount: number) => {
     setIsProcessing(true);
@@ -295,7 +341,7 @@ export default function CredVantageApp() {
     }
   };
 
-  // Spreadsheet import direct to IndexedDB
+  // 📊 Spreadsheet Import (STEP 1: Import ALL rows for display with smart email detection)
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -314,7 +360,12 @@ export default function CredVantageApp() {
           const nameKey = rowKeys.find(k => /name/i.test(k) || /student/i.test(k));
           const idKey = rowKeys.find(k => /id/i.test(k) || /roll/i.test(k));
           const courseKey = rowKeys.find(k => /course/i.test(k) || /subject/i.test(k));
-          const emailKey = rowKeys.find(k => /email/i.test(k));
+          
+          // Smart Email Column Detection (Checks header keyword or direct cell string matching '@')
+          let emailKey = rowKeys.find(k => /email/i.test(k));
+          if (!emailKey) {
+            emailKey = rowKeys.find(k => String(row[k] || '').includes('@'));
+          }
 
           const trackingId = idKey && row[idKey] ? String(row[idKey]).trim() : `ID-${100 + idx}`;
           const rawName = nameKey && row[nameKey] ? String(row[nameKey]).trim() : '';
@@ -325,7 +376,7 @@ export default function CredVantageApp() {
           return { trackingId, name, course, email, status: 'pending' as const };
         });
 
-        // Store into IndexedDB
+        // Store ALL students into IndexedDB without dropping rows
         await db.students.clear();
         await db.students.bulkAdd(formattedData);
 
@@ -338,6 +389,9 @@ export default function CredVantageApp() {
             status: formattedData[0].status
           });
         }
+
+        const validEmailCount = formattedData.filter(s => s.email && s.email.includes('@')).length;
+        alert(`🎉 Excel Loaded! ${formattedData.length} total record(s) imported (${validEmailCount} with email ID).`);
       } catch (err) {
         alert("Error parsing spreadsheet file.");
       }
@@ -578,7 +632,17 @@ export default function CredVantageApp() {
                   <BarChart3 className="w-3.5 h-3.5" /> IndexedDB Roster Cache
                 </div>
 
-                <div className="flex gap-2.5 items-center justify-end w-full sm:w-auto">
+                <div className="flex flex-wrap gap-2.5 items-center justify-end w-full sm:w-auto">
+                  {/* 📧 Dispatch Student Emails Button */}
+                  <button
+                    type="button"
+                    onClick={handleSendBulkEmails}
+                    disabled={isProcessing || studentsList.length === 0}
+                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-300 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-md transition active:scale-95 cursor-pointer"
+                  >
+                    📧 Dispatch Student Emails
+                  </button>
+
                   {currentCount > 0 && (
                     <button type="button" onClick={downloadAllZIP} disabled={isProcessing} className="px-4 py-2 bg-slate-950 hover:bg-slate-900 text-white text-xs font-bold rounded-xl transition flex items-center gap-1.5 shadow">
                       <Download className="w-3.5 h-3.5" /> Export All Batch ZIP ({currentCount})
@@ -641,8 +705,6 @@ export default function CredVantageApp() {
           {/* TAB 2: WALLET TOP-UP & SUBSCRIPTION PLANS */}
           {activeTab === 'billing' && (
             <div className="w-full flex flex-col gap-6 animate-fade-in">
-              
-              {/* WALLET CREDIT TOP-UP BOX */}
               <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white p-6 rounded-2xl flex flex-col md:flex-row justify-between items-center gap-6 shadow-xl border border-indigo-500/30">
                 <div>
                   <span className="text-[11px] font-bold text-indigo-300 uppercase tracking-widest block">IndexedDB Micro-Ledger Wallet</span>
@@ -668,9 +730,7 @@ export default function CredVantageApp() {
                 <p className="text-xs text-slate-500 mt-1">Scale up your institutional limits dynamically without runtime constraints via automated subscription layers.</p>
               </div>
 
-              {/* 🌟 RESTORED SUBSCRIPTION PLANS GRID */}
               <div className="grid grid-cols-1 md:grid-cols-4 gap-5 w-full">
-                
                 {/* Plan 1 */}
                 <div className={`p-6 rounded-2xl bg-white border transition-all flex flex-col justify-between ${subscriptionTier === '15-Day Free Trial' ? 'border-slate-400 shadow-md ring-2 ring-slate-400/10' : 'border-slate-200 shadow-sm'}`}>
                   <div>
@@ -723,9 +783,7 @@ export default function CredVantageApp() {
                     {subscriptionTier === 'Annual Enterprise Suite' ? 'Renew Suite' : 'Subscribe Annually'}
                   </button>
                 </div>
-
               </div>
-
             </div>
           )}
 
@@ -794,13 +852,36 @@ export default function CredVantageApp() {
                 <div className="flex justify-between items-center border-b border-slate-800 pb-4 mb-5">
                   <div>
                     <h4 className="text-sm font-bold">Dynamic Offline Inspection Engine</h4>
-                    <p className="text-[11px] text-slate-400 mt-0.5">Target: <span className="text-white font-mono font-bold">{selectedStudent.name}</span></p>
+                    <p className="text-[11px] text-slate-400 mt-0.5">
+                      Target: <span className="text-white font-mono font-bold">{selectedStudent.name}</span>
+                    </p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <button type="button" onClick={() => downloadSinglePNG(selectedStudent)} className="px-4 py-2 bg-indigo-600 text-white text-xs font-black rounded-xl flex items-center gap-1.5 shadow">
+                    {/* Download Button */}
+                    <button 
+                      type="button" 
+                      onClick={() => downloadSinglePNG(selectedStudent)} 
+                      className="px-4 py-2 bg-indigo-600 text-white text-xs font-black rounded-xl flex items-center gap-1.5 shadow transition active:scale-95"
+                    >
                       <Download className="w-3.5 h-3.5" /> Download Asset (PNG)
                     </button>
-                    <button type="button" onClick={() => { setShowPreviewModal(false); setSelectedStudent(null); }} className="p-2 bg-slate-800 text-slate-400 rounded-xl">
+
+                    {/* 🚀 LinkedIn Button (Newly Added) */}
+                    <LinkedInButton
+                      certificateTitle={selectedStudent.course}
+                      organizationName={orgDisplayName}
+                      issueYear={new Date().getFullYear()}
+                      issueMonth={new Date().getMonth() + 1}
+                      certificateId={selectedStudent.id}
+                      certificateUrl={`https://credvantage.com/verify/${encodeURIComponent(selectedStudent.id)}`}
+                    />
+
+                    {/* Close Modal Button */}
+                    <button 
+                      type="button" 
+                      onClick={() => { setShowPreviewModal(false); setSelectedStudent(null); }} 
+                      className="p-2 bg-slate-800 text-slate-400 rounded-xl hover:text-white"
+                    >
                       <X className="w-4 h-4" />
                     </button>
                   </div>
