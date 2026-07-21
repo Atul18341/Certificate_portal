@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { db, StudentRecord } from './lib/db';
 import { useLiveQuery } from 'dexie-react-hooks';
+import { CERT_TEXTS } from './lib/translations'; // 👈 Imported Translations
 
 interface StudentData {
   id: string;
@@ -43,6 +44,9 @@ export default function CredVantageApp() {
   const [signatoryRole, setSignatoryRole] = useState<string>('Dean / Controller of Certification');
   const [digitalSignatureUrl, setDigitalSignatureUrl] = useState<string>('');
   const [companyLogoUrl, setCompanyLogoUrl] = useState<string>('');
+
+  // 🌐 Certificate Language State
+  const [certLang, setCertLang] = useState<'en' | 'hi'>('en');
 
   // Subscriptions & Wallet Storage
   const [subscriptionTier, setSubscriptionTier] = useState<string>('15-Day Free Trial');
@@ -166,9 +170,8 @@ export default function CredVantageApp() {
     setActiveTab('workspace');
   };
 
-  // 📧 Email Dispatch Handler (STEP 2: Auto-detect and send only to valid email holders)
+  // 📧 Email Dispatch Handler
   const handleSendBulkEmails = async () => {
-    // Filter only students with a non-empty, valid email containing '@'
     const validStudents = studentsList.filter(s => s.email && s.email.trim() !== '' && s.email.includes('@'));
 
     if (validStudents.length === 0) {
@@ -341,7 +344,7 @@ export default function CredVantageApp() {
     }
   };
 
-  // 📊 Spreadsheet Import (STEP 1: Import ALL rows for display with smart email detection)
+  // 📊 Spreadsheet Import
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -361,7 +364,6 @@ export default function CredVantageApp() {
           const idKey = rowKeys.find(k => /id/i.test(k) || /roll/i.test(k));
           const courseKey = rowKeys.find(k => /course/i.test(k) || /subject/i.test(k));
           
-          // Smart Email Column Detection (Checks header keyword or direct cell string matching '@')
           let emailKey = rowKeys.find(k => /email/i.test(k));
           if (!emailKey) {
             emailKey = rowKeys.find(k => String(row[k] || '').includes('@'));
@@ -376,7 +378,6 @@ export default function CredVantageApp() {
           return { trackingId, name, course, email, status: 'pending' as const };
         });
 
-        // Store ALL students into IndexedDB without dropping rows
         await db.students.clear();
         await db.students.bulkAdd(formattedData);
 
@@ -857,6 +858,16 @@ export default function CredVantageApp() {
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
+                    {/* 🌐 LANGUAGE SWITCHER DROPDOWN */}
+                    <select
+                      value={certLang}
+                      onChange={(e) => setCertLang(e.target.value as 'en' | 'hi')}
+                      className="bg-slate-800 text-white text-xs font-bold px-3 py-2 rounded-xl border border-slate-700 outline-none cursor-pointer"
+                    >
+                      <option value="en">🌐 English</option>
+                      <option value="hi">🇮🇳 हिंदी</option>
+                    </select>
+
                     {/* Download Button */}
                     <button 
                       type="button" 
@@ -866,7 +877,7 @@ export default function CredVantageApp() {
                       <Download className="w-3.5 h-3.5" /> Download Asset (PNG)
                     </button>
 
-                    {/* 🚀 LinkedIn Button (Newly Added) */}
+                    {/* 🚀 LinkedIn Button */}
                     <LinkedInButton
                       certificateTitle={selectedStudent.course}
                       organizationName={orgDisplayName}
@@ -904,18 +915,24 @@ export default function CredVantageApp() {
                       </div>
                     </div>
 
-                    {/* Content */}
+                    {/* Content (Dynamic Text Translation Applied Here) */}
                     <div className="w-full text-center flex flex-col items-center my-auto py-6">
-                      <span className="text-[9px] font-black uppercase tracking-[0.35em] text-indigo-400 bg-indigo-950/50 px-3 py-1 rounded-full border border-indigo-500/20">Official Attestation</span>
-                      <h1 className="text-3xl md:text-4xl lg:text-5xl font-serif text-white mt-4 font-extralight leading-none">Certificate of Achievement</h1>
+                      <span className="text-[9px] font-black uppercase tracking-[0.35em] text-indigo-400 bg-indigo-950/50 px-3 py-1 rounded-full border border-indigo-500/20">
+                        {CERT_TEXTS[certLang].attestation}
+                      </span>
+                      <h1 className="text-3xl md:text-4xl lg:text-5xl font-serif text-white mt-4 font-extralight leading-none">
+                        {CERT_TEXTS[certLang].heading}
+                      </h1>
                       
                       <div className="w-12 h-[1px] bg-slate-800 my-6"></div>
                       
-                      <p className="text-xs italic font-serif text-slate-400">This is to certify that</p>
+                      <p className="text-xs italic font-serif text-slate-400">
+                        {CERT_TEXTS[certLang].subheading}
+                      </p>
                       <h2 className="text-2xl md:text-3xl lg:text-4xl tracking-tight text-white mt-3.5 font-bold font-sans">{selectedStudent.name}</h2>
                       
                       <p className="text-xs font-serif text-slate-400 mt-6 max-w-md mx-auto leading-relaxed">
-                        has successfully fulfilled all academic requirements and training parameters prescribed for the graduation course of study in
+                        {CERT_TEXTS[certLang].body}
                       </p>
                       <h3 className="text-xs md:text-sm font-black text-indigo-200 mt-3.5 tracking-wider uppercase font-sans bg-slate-950 border border-slate-800 px-4 py-2 rounded-xl shadow-sm">{selectedStudent.course}</h3>
                     </div>
