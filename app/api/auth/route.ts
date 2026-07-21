@@ -2,12 +2,13 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import crypto from "crypto";
 
-const supabase = createClient(
-  process.env.SUPABASE_URL || "https://jxflprsskwefwnbhhsxp.supabase.co",
-  process.env.SUPABASE_SERVICE_ROLE_KEY || ""
-);
+// ✅ Safe Fallbacks Added (Build crash & Invalid URL Error fix karne ke liye)
+const supabaseUrl = process.env.SUPABASE_URL || "https://jxflprsskwefwnbhhsxp.supabase.co";
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.dummy_key_for_build_safety";
 
-// Simple encryption utility function for production safety
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+// Password Hashing Utility
 function hashPassword(password: string) {
   return crypto.createHash("sha256").update(password).digest("hex");
 }
@@ -18,22 +19,33 @@ export async function POST(request: Request) {
     const { action, email, password, fullName, companyName } = body;
 
     if (action === "signup") {
-      // 1. Double check user registration duplicate rules
-      const { data: existingUser } = await supabase.from("saas_users").select("id").eq("email", email).single();
+      // 1. Check duplicate user using maybeSingle() [Safe for 0 rows]
+      const { data: existingUser } = await supabase
+        .from("saas_users")
+        .select("id")
+        .eq("email", email)
+        .maybeSingle();
+
       if (existingUser) {
         return NextResponse.json({ error: "Email address already registered!" }, { status: 400 });
       }
 
       // 2. Insert User Identity
-      const { data: newUser, error: userErr } = await supabase.from("saas_users").insert({
-        full_name: fullName,
-        email: email,
-        password_hash: hashPassword(password)
-      }).select().single();
+      const { data: newUser, error: userErr } = await supabase
+        .from("saas_users")
+        .insert({
+          full_name: fullName,
+          email: email,
+          password_hash: hashPassword(password)
+        })
+        .select()
+        .single();
 
-      if (userErr || !newUser) throw new Error("User creation pipeline failed.");
+      if (userErr || !newUser) {
+        throw new Error(userErr?.message || "User creation pipeline failed.");
+      }
 
-      // 3. Create isolated corporate tenant dashboard workspace
+      // 3. Create isolated corporate tenant wallet workspace
       await supabase.from("organization_wallets").insert({
         user_id: newUser.id,
         company_name: companyName || `${fullName}'s Center`
@@ -47,13 +59,13 @@ export async function POST(request: Request) {
         .from("saas_users")
         .select("id, full_name, email, password_hash")
         .eq("email", email)
-        .single();
+        .maybeSingle();
 
       if (error || !user || user.password_hash !== hashPassword(password)) {
         return NextResponse.json({ error: "Invalid login email credentials or password." }, { status: 401 });
       }
 
-      // Safe deployment browser session management data returning payload
+      // Return user payload
       return NextResponse.json({
         success: true,
         user: { id: user.id, name: user.full_name, email: user.email }
@@ -62,6 +74,6 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ error: "Invalid pipeline execution requested" }, { status: 400 });
   } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json({ error: err.message || "Internal Server Error" }, { status: 500 });
   }
 }
