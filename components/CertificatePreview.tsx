@@ -55,13 +55,18 @@ export default function CertificatePreview({
           </div>
           <div className="flex items-center gap-2">
             <select
-              value={certLang}
-              onChange={(e) => setCertLang(e.target.value as 'en' | 'hi')}
-              className="bg-slate-800 text-white text-xs font-bold px-3 py-2 rounded-xl border border-slate-700 outline-none cursor-pointer"
-            >
-              <option value="en">🌐 English</option>
-              <option value="hi">🇮🇳 हिंदी</option>
-            </select>
+  value={certLang}
+  onChange={(e) => setCertLang(e.target.value as any)}
+  className="bg-slate-800 text-white text-xs font-bold px-3 py-2 rounded-xl border border-slate-700 outline-none cursor-pointer"
+>
+  <option value="en">🌐 English</option>
+  <option value="hi">🇮🇳 हिंदी (Hindi)</option>
+  <option value="es">🇪🇸 Español (Spanish)</option>
+  <option value="fr">🇫🇷 Français (French)</option>
+  <option value="de">🇩🇪 Deutsch (German)</option>
+  <option value="ta">🇮🇳 தமிழ் (Tamil)</option>
+  <option value="te">🇮🇳 తెలుగు (Telugu)</option>
+</select>
 
             <button 
               type="button" 

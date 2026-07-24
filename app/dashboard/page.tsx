@@ -3,7 +3,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import Script from "next/script";
 import * as XLSX from 'xlsx';
 import html2canvas from 'html2canvas';
 import JSZip from 'jszip';
@@ -22,23 +21,25 @@ interface StudentData {
   name: string;
   course: string;
   email: string;
+  region?: string;
+  badgeUrl?: string;
   status: 'pending' | 'success';
 }
 
 export default function DashboardPage() {
   const router = useRouter();
-  const PUBLIC_RAZORPAY_KEY_ID = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || "rzp_test_key"; 
+  const PUBLIC_RAZORPAY_KEY_ID = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || "rzp_test_1234567890abcdef"; 
 
   // Multi-Tab Router: 'workspace' | 'billing' | 'settings'
   const [activeTab, setActiveTab] = useState<'workspace' | 'billing' | 'settings'>('workspace');
 
-  // Authentication Context State
+  // Session State
   const [activeSession, setActiveSession] = useState<any>(null);
   const [isLoadingSession, setIsLoadingSession] = useState(true);
 
   // Branding States
   const [orgDisplayName, setOrgDisplayName] = useState<string>('CRED-VANTAGE GLOBAL REGISTRY NETWORK');
-  const [signatoryName, setSignatoryName] = useState<string>('Dr. A. P. Sharma'); // 🟢 Fixed Quote Syntax
+  const [signatoryName, setSignatoryName] = useState<string>('Dr. A. P. Sharma');
   const [signatoryRole, setSignatoryRole] = useState<string>('Dean / Controller of Certification');
   const [digitalSignatureUrl, setDigitalSignatureUrl] = useState<string>('');
   const [companyLogoUrl, setCompanyLogoUrl] = useState<string>('');
@@ -220,10 +221,33 @@ export default function DashboardPage() {
     }
   };
 
+  // 🟢 Helper to dynamically load Razorpay script
+  const loadRazorpaySDK = () => {
+    return new Promise((resolve) => {
+      if ((window as any).Razorpay) {
+        resolve(true);
+        return;
+      }
+      const script = document.createElement('script');
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+  };
+
   // Real User Wallet Top-Up via Razorpay
   const handleWalletTopUp = async (amount: number) => {
     setIsProcessing(true);
     setProgressStatus(`Initializing Razorpay Wallet Top-Up for ₹${amount}...`);
+
+    const loaded = await loadRazorpaySDK();
+    if (!loaded) {
+      setIsProcessing(false);
+      setProgressStatus('');
+      alert("❌ Razorpay SDK load nahi hua. Check internet connection.");
+      return;
+    }
 
     try {
       const options = {
@@ -233,11 +257,11 @@ export default function DashboardPage() {
         name: "CredVantage Networks Inc.",
         description: `Micro-Ledger Wallet Credit Top-Up (INR ${amount})`,
         image: "https://api.dicebear.com/7.x/identicon/svg?seed=credvantage",
-        handler: async function () {
+        handler: async function (response: any) {
           await updateWalletBalance(walletBalance + amount);
           setIsProcessing(false);
           setProgressStatus('');
-          alert(`🎉 Top-Up Successful! Added ₹${amount.toFixed(2)} to your IndexedDB wallet balance.`);
+          alert(`🎉 Top-Up Successful! Payment ID: ${response.razorpay_payment_id || 'LOCAL_SUCCESS'}`);
         },
         prefill: {
           name: activeSession?.name || "Corporate User",
@@ -252,19 +276,12 @@ export default function DashboardPage() {
         }
       };
 
-      if ((window as any).Razorpay) {
-        const rzp = new (window as any).Razorpay(options);
-        rzp.open();
-      } else {
-        await new Promise(resolve => setTimeout(resolve, 800));
-        await updateWalletBalance(walletBalance + amount);
-        setIsProcessing(false);
-        setProgressStatus('');
-        alert(`🎉 Top-Up Successful! Added ₹${amount.toFixed(2)} to your IndexedDB wallet balance.`);
-      }
-    } catch {
+      const rzp = new (window as any).Razorpay(options);
+      rzp.open();
+    } catch (err) {
       setIsProcessing(false);
       setProgressStatus('');
+      alert("Razorpay popup failed to launch.");
     }
   };
 
@@ -272,6 +289,14 @@ export default function DashboardPage() {
   const handleSubscriptionPurchase = async (tierName: string, amount: number, durationDays: number) => {
     setIsProcessing(true);
     setProgressStatus(`Routing secure subscription parameters...`);
+
+    const loaded = await loadRazorpaySDK();
+    if (!loaded) {
+      setIsProcessing(false);
+      setProgressStatus('');
+      alert("❌ Razorpay SDK load nahi hua.");
+      return;
+    }
 
     try {
       const options = {
@@ -305,20 +330,8 @@ export default function DashboardPage() {
         }
       };
 
-      if ((window as any).Razorpay) {
-        const rzp = new (window as any).Razorpay(options);
-        rzp.open();
-      } else {
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        await db.settings.put({ key: 'cred_subscription_tier', value: tierName });
-        await db.settings.put({ key: 'cred_trial_days', value: durationDays.toString() });
-        setSubscriptionTier(tierName);
-        setDaysRemaining(durationDays);
-        if (amount > 0) await updateWalletBalance(walletBalance + 1000.00);
-        setIsProcessing(false);
-        setProgressStatus('');
-        setActiveTab('workspace');
-      }
+      const rzp = new (window as any).Razorpay(options);
+      rzp.open();
     } catch {
       setIsProcessing(false);
       setProgressStatus('');
@@ -344,6 +357,7 @@ export default function DashboardPage() {
           const nameKey = rowKeys.find(k => /name/i.test(k) || /student/i.test(k));
           const idKey = rowKeys.find(k => /id/i.test(k) || /roll/i.test(k));
           const courseKey = rowKeys.find(k => /course/i.test(k) || /subject/i.test(k));
+          const regionKey = rowKeys.find(k => /region/i.test(k) || /campus/i.test(k) || /branch/i.test(k) || /location/i.test(k)); // 👈 Region Auto-detector
           
           let emailKey = rowKeys.find(k => /email/i.test(k));
           if (!emailKey) {
@@ -355,8 +369,9 @@ export default function DashboardPage() {
           const name = rawName === '' ? trackingId : rawName;
           const course = courseKey && row[courseKey] ? String(row[courseKey]).trim() : 'General Certification';
           const email = emailKey && row[emailKey] ? String(row[emailKey]).trim() : '';
+          const region = regionKey && row[regionKey] ? String(row[regionKey]).trim() : 'Global';
 
-          return { trackingId, name, course, email, status: 'pending' as const };
+          return { trackingId, name, course, email, region, status: 'pending' as const };
         });
 
         await db.students.clear();
@@ -369,6 +384,7 @@ export default function DashboardPage() {
             course: formattedData[0].course,
             email: formattedData[0].email,
             status: formattedData[0].status
+            
           });
         }
 
@@ -493,7 +509,6 @@ export default function DashboardPage() {
   return (
     <div className="w-full min-h-screen bg-slate-950 flex flex-col justify-center items-center font-sans relative text-slate-800 antialiased overflow-x-hidden pb-12">
       
-
       {isProcessing && progressStatus && (
         <div className="fixed bottom-6 right-6 bg-slate-900 border border-indigo-500/30 text-white p-4 rounded-xl shadow-2xl flex items-center gap-3 z-50 animate-bounce">
           <div className="w-4 h-4 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin"></div>
