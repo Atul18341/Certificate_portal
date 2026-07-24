@@ -1,22 +1,21 @@
 'use check-clean';
 'use client';
 
-import LinkedInButton from "@/components/LinkedInButton";
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-
 import Script from "next/script";
 import * as XLSX from 'xlsx';
 import html2canvas from 'html2canvas';
 import JSZip from 'jszip';
-import { 
-  ShieldCheck, Wallet, FileSpreadsheet, Download, Lock, User, 
-  Briefcase, Zap, CheckCircle, CreditCard, Sparkles, BarChart3, 
-  Users, Clock, Eye, X, Settings, Image as ImageIcon, Check, PlusCircle, WifiOff 
-} from 'lucide-react';
+import { CreditCard, Settings } from 'lucide-react';
+
+import WorkspaceTab from "@/components/WorkspaceTab";
+import BillingTab from "@/components/billingtab";
+import SettingsTab from "@/components/settingstab";
+import CertificateModal from "@/components/CertificatePreview";
+
 import { db, StudentRecord } from '../lib/db';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { CERT_TEXTS } from '../lib/translations';
 
 interface StudentData {
   id: string;
@@ -26,7 +25,7 @@ interface StudentData {
   status: 'pending' | 'success';
 }
 
-export default function CredVantageApp() {
+export default function DashboardPage() {
   const router = useRouter();
   const PUBLIC_RAZORPAY_KEY_ID = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || "rzp_test_key"; 
 
@@ -39,12 +38,12 @@ export default function CredVantageApp() {
 
   // Branding States
   const [orgDisplayName, setOrgDisplayName] = useState<string>('CRED-VANTAGE GLOBAL REGISTRY NETWORK');
-  const [signatoryName, setSignatoryName] = useState<string>('Dr. A. P. Sharma');
+  const [signatoryName, setSignatoryName] = useState<string>('Dr. A. P. Sharma'); // 🟢 Fixed Quote Syntax
   const [signatoryRole, setSignatoryRole] = useState<string>('Dean / Controller of Certification');
   const [digitalSignatureUrl, setDigitalSignatureUrl] = useState<string>('');
   const [companyLogoUrl, setCompanyLogoUrl] = useState<string>('');
 
-  // 🌐 Certificate Language State
+  // Certificate Language State
   const [certLang, setCertLang] = useState<'en' | 'hi'>('en');
 
   // Subscriptions & Wallet Storage
@@ -61,7 +60,7 @@ export default function CredVantageApp() {
   
   const certRef = useRef<HTMLDivElement>(null);
 
-  // 🔄 INDEXEDDB LIVE SYNC (Dexie Hook)
+  // Live Sync with IndexedDB
   const offlineStudents = useLiveQuery(() => db.students.toArray(), []);
   
   const studentsList: StudentData[] = (offlineStudents || []).map(s => ({
@@ -77,7 +76,6 @@ export default function CredVantageApp() {
     const loadSettingsFromDB = async () => {
       const savedUser = await db.settings.get('cred_session');
 
-      // 🔴 If user is not logged in, redirect to /login route
       if (!savedUser) {
         router.push('/login');
         return;
@@ -513,13 +511,25 @@ export default function CredVantageApp() {
             </div>
             
             <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200">
-              <button type="button" onClick={() => setActiveTab('workspace')} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'workspace' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}>
+              <button 
+                type="button" 
+                onClick={() => setActiveTab('workspace')} 
+                className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${activeTab === 'workspace' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}
+              >
                 Registry Deck
               </button>
-              <button type="button" onClick={() => setActiveTab('billing')} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${activeTab === 'billing' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}>
+              <button 
+                type="button" 
+                onClick={() => setActiveTab('billing')} 
+                className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer ${activeTab === 'billing' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}
+              >
                 <CreditCard className="w-3 h-3" /> Wallet & Subscriptions
               </button>
-              <button type="button" onClick={() => setActiveTab('settings')} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${activeTab === 'settings' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}>
+              <button 
+                type="button" 
+                onClick={() => setActiveTab('settings')} 
+                className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer ${activeTab === 'settings' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}
+              >
                 <Settings className="w-3 h-3" /> Branding & Signature
               </button>
             </div>
@@ -535,383 +545,68 @@ export default function CredVantageApp() {
 
         {/* TAB 1: WORKSPACE */}
         {activeTab === 'workspace' && (
-          <div className="w-full flex flex-col gap-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full">
-              <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
-                <div>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase">Offline Database</span>
-                  <h3 className="text-2xl font-black text-slate-900 mt-1">{currentCount} <span className="text-xs font-normal text-slate-400">records</span></h3>
-                </div>
-                <div className="p-3 bg-slate-100 text-slate-600 rounded-xl"><Users className="w-5 h-5" /></div>
-              </div>
-
-              <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
-                <div>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase">Minted Assets</span>
-                  <h3 className="text-2xl font-black text-emerald-600 mt-1">{successCount}</h3>
-                </div>
-                <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl"><CheckCircle className="w-5 h-5" /></div>
-              </div>
-
-              <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
-                <div>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase">Pending Batch</span>
-                  <h3 className="text-2xl font-black text-amber-500 mt-1">{pendingCount}</h3>
-                </div>
-                <div className="p-3 bg-amber-50 text-amber-600 rounded-xl"><Clock className="w-5 h-5" /></div>
-              </div>
-
-              <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
-                <div>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase">Wallet Balance</span>
-                  <h3 className="text-2xl font-black text-indigo-600 mt-1">₹{walletBalance.toFixed(2)}</h3>
-                </div>
-                <div className="p-3 bg-indigo-50 text-indigo-600 rounded-xl"><Wallet className="w-5 h-5" /></div>
-              </div>
-            </div>
-
-            {/* Action Toolbar */}
-            <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col sm:flex-row justify-between items-center gap-4">
-              <div className="p-2 bg-indigo-50 text-indigo-600 rounded-xl font-bold text-xs uppercase flex items-center gap-1">
-                <BarChart3 className="w-3.5 h-3.5" /> IndexedDB Roster Cache
-              </div>
-
-              <div className="flex flex-wrap gap-2.5 items-center justify-end w-full sm:w-auto">
-                <button
-                  type="button"
-                  onClick={handleSendBulkEmails}
-                  disabled={isProcessing || studentsList.length === 0}
-                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-300 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-md transition active:scale-95 cursor-pointer"
-                >
-                  📧 Dispatch Student Emails
-                </button>
-
-                {currentCount > 0 && (
-                  <button type="button" onClick={downloadAllZIP} disabled={isProcessing} className="px-4 py-2 bg-slate-950 hover:bg-slate-900 text-white text-xs font-bold rounded-xl transition flex items-center gap-1.5 shadow">
-                    <Download className="w-3.5 h-3.5" /> Export All Batch ZIP ({currentCount})
-                  </button>
-                )}
-                
-                <label className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold cursor-pointer flex items-center gap-1.5 shadow-md">
-                  <FileSpreadsheet className="w-3.5 h-3.5" /> Upload Roster Spreadsheet
-                  <input type="file" accept=".xlsx, .xls, .csv" onChange={handleFileUpload} className="hidden" />
-                </label>
-              </div>
-            </div>
-
-            {/* Data Table */}
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden w-full">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-slate-50 border-b border-slate-200 text-[10px] font-black uppercase text-slate-400">
-                    <th className="p-4 px-6">Tracking ID</th>
-                    <th className="p-4">Recipient Name</th>
-                    <th className="p-4">Course Title</th>
-                    <th className="p-4">Status</th>
-                    <th className="p-4 text-right px-6">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 text-slate-700 text-xs font-medium">
-                  {studentsList.length > 0 ? (
-                    studentsList.map((student, idx) => (
-                      <tr key={`${student.id}-${idx}`} className="hover:bg-slate-50/60">
-                        <td className="p-4 px-6 font-mono font-bold text-slate-500">{student.id}</td>
-                        <td className="p-4 font-black text-slate-900">{student.name}</td>
-                        <td className="p-4 text-slate-600">{student.course}</td>
-                        <td className="p-4">
-                          {student.status === 'success' ? (
-                            <span className="px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-md border border-emerald-200 text-[10px] font-bold uppercase">✓ Minted</span>
-                          ) : (
-                            <span className="px-2.5 py-1 bg-amber-50 text-amber-700 rounded-md border border-amber-200 text-[10px] font-bold uppercase">⏳ Cached</span>
-                          )}
-                        </td>
-                        <td className="p-4 text-right px-6">
-                          <button type="button" onClick={() => { setSelectedStudent(student); setShowPreviewModal(true); }} className="px-3 py-1.5 bg-slate-100 border border-slate-200 font-bold rounded-lg text-slate-600 hover:text-indigo-600 flex items-center gap-1 ml-auto">
-                            <Eye className="w-3 h-3" /> Preview
-                          </button>
-                        </td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan={5} className="text-center p-12 text-slate-400 font-semibold">
-                        No active IndexedDB records found. Upload a roster spreadsheet to save offline.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
+          <WorkspaceTab
+            studentsList={studentsList}
+            currentCount={currentCount}
+            successCount={successCount}
+            pendingCount={pendingCount}
+            walletBalance={walletBalance}
+            isProcessing={isProcessing}
+            onSendBulkEmails={handleSendBulkEmails}
+            onDownloadAllZIP={downloadAllZIP}
+            onFileUpload={handleFileUpload}
+            onSelectStudent={(student) => {
+              setSelectedStudent(student);
+              setShowPreviewModal(true);
+            }}
+          />
         )}
 
-        {/* TAB 2: WALLET TOP-UP & SUBSCRIPTION PLANS */}
+        {/* TAB 2: BILLING */}
         {activeTab === 'billing' && (
-          <div className="w-full flex flex-col gap-6 animate-fade-in">
-            <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white p-6 rounded-2xl flex flex-col md:flex-row justify-between items-center gap-6 shadow-xl border border-indigo-500/30">
-              <div>
-                <span className="text-[11px] font-bold text-indigo-300 uppercase tracking-widest block">IndexedDB Micro-Ledger Wallet</span>
-                <h3 className="text-3xl font-black text-white mt-1">Current Balance: ₹{walletBalance.toFixed(2)}</h3>
-                <p className="text-xs text-slate-400 mt-1">Wallet balance is stored locally in Dexie IndexedDB for uninterrupted offline processing.</p>
-              </div>
-
-              <div className="flex flex-wrap gap-3 items-center justify-end">
-                <button type="button" onClick={() => handleWalletTopUp(500)} className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs rounded-xl border border-slate-700 transition active:scale-95 flex items-center gap-1.5">
-                  <PlusCircle className="w-3.5 h-3.5 text-indigo-400" /> Top-Up ₹500
-                </button>
-                <button type="button" onClick={() => handleWalletTopUp(1000)} className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs rounded-xl border border-slate-700 transition active:scale-95 flex items-center gap-1.5">
-                  <PlusCircle className="w-3.5 h-3.5 text-indigo-400" /> Top-Up ₹1,000
-                </button>
-                <button type="button" onClick={() => handleWalletTopUp(5000)} className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-black text-xs rounded-xl shadow-lg transition active:scale-95 flex items-center gap-1.5">
-                  <Zap className="w-3.5 h-3.5 fill-white" /> Top-Up ₹5,000
-                </button>
-              </div>
-            </div>
-
-            <div className="text-center max-w-xl mx-auto py-2">
-              <h2 className="text-2xl font-black text-slate-900 uppercase tracking-wider">Enterprise Packaging Infrastructure</h2>
-              <p className="text-xs text-slate-500 mt-1">Scale up your institutional limits dynamically without runtime constraints via automated subscription layers.</p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-5 w-full">
-              {/* Plan 1 */}
-              <div className={`p-6 rounded-2xl bg-white border transition-all flex flex-col justify-between ${subscriptionTier === '15-Day Free Trial' ? 'border-slate-400 shadow-md ring-2 ring-slate-400/10' : 'border-slate-200 shadow-sm'}`}>
-                <div>
-                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Onboarding</span>
-                  <h4 className="text-lg font-black text-slate-900">15-Day Free Trial</h4>
-                  <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">Perfect sandbox environment to test single layouts before production mapping.</p>
-                  <div className="text-2xl font-black text-slate-900 mt-4">₹0 <span className="text-xs font-normal text-slate-400">/ user trial</span></div>
-                </div>
-                <button type="button" onClick={() => handleSubscriptionPurchase("15-Day Free Trial", 0, 15)} disabled={subscriptionTier === '15-Day Free Trial'} className="w-full mt-6 py-2.5 bg-slate-100 hover:bg-slate-200 disabled:bg-emerald-50 disabled:text-emerald-800 text-slate-700 text-xs font-bold rounded-xl transition active:scale-95">
-                  {subscriptionTier === '15-Day Free Trial' ? '✓ Standard Plan Active' : 'Initialize Trial'}
-                </button>
-              </div>
-
-              {/* Plan 2 */}
-              <div className={`p-6 rounded-2xl bg-white border transition-all flex flex-col justify-between ${subscriptionTier === 'Weekly Growth Plan' ? 'border-indigo-400 shadow-md ring-2 ring-indigo-500/10' : 'border-slate-200 shadow-sm'}`}>
-                <div>
-                  <span className="text-[9px] font-black text-indigo-500 uppercase tracking-widest block mb-1">Flexible Tier</span>
-                  <h4 className="text-lg font-black text-slate-900">Weekly Fast Pack</h4>
-                  <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">Best suite option for urgent bootcamps or short curriculum batch releases.</p>
-                  <div className="text-2xl font-black text-slate-900 mt-4">₹299 <span className="text-xs font-normal text-slate-400">/ 7 days</span></div>
-                </div>
-                <button type="button" onClick={() => handleSubscriptionPurchase("Weekly Growth Plan", 299, 7)} className="w-full mt-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-black rounded-xl transition active:scale-95 shadow-md shadow-indigo-600/10">
-                  {subscriptionTier === 'Weekly Growth Plan' ? 'Renew Active Layer' : 'Subscribe Weekly'}
-                </button>
-              </div>
-
-              {/* Plan 3 */}
-              <div className={`p-6 rounded-2xl border transition-all relative flex flex-col justify-between ${subscriptionTier === 'Monthly Pro Master' ? 'bg-gradient-to-b from-indigo-50/20 to-white border-indigo-500 shadow-lg ring-2 ring-indigo-500/20' : 'bg-white border-slate-200 shadow-sm'}`}>
-                <div className="absolute top-0 right-0 bg-indigo-600 text-white text-[8px] tracking-widest font-black px-3 py-1 rounded-bl-xl shadow-sm uppercase">Recommended</div>
-                <div>
-                  <span className="text-[9px] font-black text-indigo-600 uppercase tracking-widest block mb-1">Most Preferred</span>
-                  <h4 className="text-lg font-black text-slate-900">Monthly Pro Layer</h4>
-                  <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">Full bulk processing capability with priority cloud cache memory allocation.</p>
-                  <div className="text-2xl font-black text-slate-900 mt-4">₹999 <span className="text-xs font-normal text-slate-400">/ 30 days master</span></div>
-                </div>
-                <button type="button" onClick={() => handleSubscriptionPurchase("Monthly Pro Master", 999, 30)} className="w-full mt-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-black rounded-xl transition active:scale-95 shadow-md shadow-indigo-600/20">
-                  {subscriptionTier === 'Monthly Pro Master' ? 'Renew Pro Layer' : 'Subscribe Pro Monthly'}
-                </button>
-              </div>
-
-              {/* Plan 4 */}
-              <div className={`p-6 rounded-2xl bg-white border transition-all flex flex-col justify-between ${subscriptionTier === 'Annual Enterprise Suite' ? 'border-amber-300 shadow-md ring-2 ring-amber-500/10' : 'border-slate-200 shadow-sm'}`}>
-                <div>
-                  <span className="text-[9px] font-black text-amber-600 uppercase tracking-widest block mb-1">Institutional</span>
-                  <h4 className="text-lg font-black text-slate-900">Annual Suite Corp</h4>
-                  <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">Dedicated permanent registry logs mapping with 24/7 dedicated account support.</p>
-                  <div className="text-2xl font-black text-amber-600 mt-4">₹7,999 <span className="text-xs font-normal text-slate-400">/ 365 days</span></div>
-                </div>
-                <button type="button" onClick={() => handleSubscriptionPurchase("Annual Enterprise Suite", 7999, 365)} className="w-full mt-6 py-2.5 bg-slate-950 hover:bg-slate-900 text-white text-xs font-black rounded-xl transition active:scale-95 shadow-sm">
-                  {subscriptionTier === 'Annual Enterprise Suite' ? 'Renew Suite' : 'Subscribe Annually'}
-                </button>
-              </div>
-            </div>
-          </div>
+          <BillingTab
+            walletBalance={walletBalance}
+            subscriptionTier={subscriptionTier}
+            onWalletTopUp={handleWalletTopUp}
+            onSubscriptionPurchase={handleSubscriptionPurchase}
+          />
         )}
 
         {/* TAB 3: BRANDING SETTINGS */}
         {activeTab === 'settings' && (
-          <div className="w-full max-w-4xl bg-white rounded-2xl border border-slate-200 p-8 shadow-sm text-slate-800">
-            <div className="border-b border-slate-200 pb-4 mb-6">
-              <h2 className="text-xl font-black text-slate-900">Organization & Certificate Settings</h2>
-              <p className="text-xs text-slate-500 mt-1">All customization choices are permanently stored in IndexedDB browser storage.</p>
-            </div>
-
-            <form onSubmit={handleSaveBrandingSettings} className="flex flex-col gap-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="md:col-span-2">
-                  <label className="text-xs font-bold text-slate-700 block mb-1">Institution Title</label>
-                  <input type="text" value={orgDisplayName} onChange={(e) => setOrgDisplayName(e.target.value)} className="w-full px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold uppercase" />
-                </div>
-
-                <div>
-                  <label className="text-xs font-bold text-slate-700 block mb-1">Authorized Signatory Name</label>
-                  <input type="text" value={signatoryName} onChange={(e) => setSignatoryName(e.target.value)} className="w-full px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold" />
-                </div>
-
-                <div>
-                  <label className="text-xs font-bold text-slate-700 block mb-1">Signatory Designation / Role</label>
-                  <input type="text" value={signatoryRole} onChange={(e) => setSignatoryRole(e.target.value)} className="w-full px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold" />
-                </div>
-              </div>
-
-              <div className="border-t border-slate-100 pt-5 grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Logo Upload */}
-                <div className="flex flex-col gap-3">
-                  <label className="text-xs font-bold text-slate-700">Institution Logo</label>
-                  <div className="p-4 border-2 border-dashed border-slate-300 rounded-2xl flex flex-col items-center justify-center bg-slate-50 relative cursor-pointer">
-                    <ImageIcon className="w-6 h-6 text-indigo-500 mb-1" />
-                    <span className="text-xs font-bold text-slate-700">Upload Logo</span>
-                    <input type="file" accept="image/*" onChange={(e) => handleBrandingAssetUpload(e, 'logo')} className="absolute inset-0 opacity-0 cursor-pointer" />
-                  </div>
-                  {companyLogoUrl && <img src={companyLogoUrl} alt="Logo" className="h-10 object-contain self-start" />}
-                </div>
-
-                {/* Signature Upload */}
-                <div className="flex flex-col gap-3">
-                  <label className="text-xs font-bold text-slate-700">Digital Signature Image</label>
-                  <div className="p-4 border-2 border-dashed border-slate-300 rounded-2xl flex flex-col items-center justify-center bg-slate-50 relative cursor-pointer">
-                    <ImageIcon className="w-6 h-6 text-indigo-500 mb-1" />
-                    <span className="text-xs font-bold text-slate-700">Upload Transparent Signature</span>
-                    <input type="file" accept="image/png, image/jpeg" onChange={(e) => handleBrandingAssetUpload(e, 'signature')} className="absolute inset-0 opacity-0 cursor-pointer" />
-                  </div>
-                  {digitalSignatureUrl && <img src={digitalSignatureUrl} alt="Signature" className="h-10 object-contain invert self-start" />}
-                </div>
-              </div>
-
-              <button type="submit" className="px-6 py-2.5 bg-indigo-600 text-white font-bold text-xs rounded-xl shadow-md self-end mt-4 cursor-pointer">
-                Save Settings to IndexedDB
-              </button>
-            </form>
-          </div>
+          <SettingsTab
+            orgDisplayName={orgDisplayName}
+            setOrgDisplayName={setOrgDisplayName}
+            signatoryName={signatoryName}
+            setSignatoryName={setSignatoryName}
+            signatoryRole={signatoryRole}
+            setSignatoryRole={setSignatoryRole}
+            companyLogoUrl={companyLogoUrl}
+            digitalSignatureUrl={digitalSignatureUrl}
+            onBrandingAssetUpload={handleBrandingAssetUpload}
+            onSaveBrandingSettings={handleSaveBrandingSettings}
+          />
         )}
 
         {/* CERTIFICATE PREVIEW MODAL */}
         {showPreviewModal && selectedStudent && (
-          <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center z-50 p-4 overflow-y-auto">
-            <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-[850px] p-6 text-white shadow-2xl relative">
-              
-              <div className="flex justify-between items-center border-b border-slate-800 pb-4 mb-5">
-                <div>
-                  <h4 className="text-sm font-bold">Dynamic Offline Inspection Engine</h4>
-                  <p className="text-[11px] text-slate-400 mt-0.5">
-                    Target: <span className="text-white font-mono font-bold">{selectedStudent.name}</span>
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  {/* 🌐 LANGUAGE SWITCHER DROPDOWN */}
-                  <select
-                    value={certLang}
-                    onChange={(e) => setCertLang(e.target.value as 'en' | 'hi')}
-                    className="bg-slate-800 text-white text-xs font-bold px-3 py-2 rounded-xl border border-slate-700 outline-none cursor-pointer"
-                  >
-                    <option value="en">🌐 English</option>
-                    <option value="hi">🇮🇳 हिंदी</option>
-                  </select>
-
-                  {/* Download Button */}
-                  <button 
-                    type="button" 
-                    onClick={() => downloadSinglePNG(selectedStudent)} 
-                    className="px-4 py-2 bg-indigo-600 text-white text-xs font-black rounded-xl flex items-center gap-1.5 shadow transition active:scale-95 cursor-pointer"
-                  >
-                    <Download className="w-3.5 h-3.5" /> Download Asset (PNG)
-                  </button>
-
-                  {/* 🚀 LinkedIn Button */}
-                  <LinkedInButton
-                    certificateTitle={selectedStudent.course}
-                    organizationName={orgDisplayName}
-                    issueYear={new Date().getFullYear()}
-                    issueMonth={new Date().getMonth() + 1}
-                    certificateId={selectedStudent.id}
-                    certificateUrl={`https://credvantage.com/verify/${encodeURIComponent(selectedStudent.id)}`}
-                  />
-
-                  {/* Close Modal Button */}
-                  <button 
-                    type="button" 
-                    onClick={() => { setShowPreviewModal(false); setSelectedStudent(null); }} 
-                    className="p-2 bg-slate-800 text-slate-400 rounded-xl hover:text-white cursor-pointer"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-
-              <div className="w-full bg-slate-950 p-6 rounded-2xl flex justify-center items-center border border-slate-800">
-                <div ref={certRef} className="relative w-full aspect-[1.414/1] bg-slate-900 p-[8%] border border-slate-800 flex flex-col justify-between items-center text-white shadow-2xl">
-                  
-                  {/* Header */}
-                  <div className="w-full flex justify-between items-start border-b border-slate-800/60 pb-5">
-                    <div className="text-left flex items-center gap-3">
-                      {companyLogoUrl && <img src={companyLogoUrl} alt="Logo" className="h-9 max-w-[120px] object-contain" />}
-                      <div>
-                        <h4 className="text-[11px] font-black tracking-[0.2em] text-indigo-400 uppercase">{orgDisplayName}</h4>
-                        <p className="text-[8px] font-mono text-slate-500 mt-0.5">OFFICIAL RECIPIENT VERIFICATION NODE</p>
-                      </div>
-                    </div>
-                    <div className="bg-indigo-950/40 border border-indigo-500/30 px-3 py-1.5 rounded-lg text-indigo-300 font-mono text-[9px] font-bold">
-                      ID // <span className="text-white font-black">{selectedStudent.id}</span>
-                    </div>
-                  </div>
-
-                  {/* Content (Dynamic Text Translation Applied Here) */}
-                  <div className="w-full text-center flex flex-col items-center my-auto py-6">
-                    <span className="text-[9px] font-black uppercase tracking-[0.35em] text-indigo-400 bg-indigo-950/50 px-3 py-1 rounded-full border border-indigo-500/20">
-                      {CERT_TEXTS[certLang].attestation}
-                    </span>
-                    <h1 className="text-3xl md:text-4xl lg:text-5xl font-serif text-white mt-4 font-extralight leading-none">
-                      {CERT_TEXTS[certLang].heading}
-                    </h1>
-                    
-                    <div className="w-12 h-[1px] bg-slate-800 my-6"></div>
-                    
-                    <p className="text-xs italic font-serif text-slate-400">
-                      {CERT_TEXTS[certLang].subheading}
-                    </p>
-                    <h2 className="text-2xl md:text-3xl lg:text-4xl tracking-tight text-white mt-3.5 font-bold font-sans">{selectedStudent.name}</h2>
-                    
-                    <p className="text-xs font-serif text-slate-400 mt-6 max-w-md mx-auto leading-relaxed">
-                      {CERT_TEXTS[certLang].body}
-                    </p>
-                    <h3 className="text-xs md:text-sm font-black text-indigo-200 mt-3.5 tracking-wider uppercase font-sans bg-slate-950 border border-slate-800 px-4 py-2 rounded-xl shadow-sm">{selectedStudent.course}</h3>
-                  </div>
-
-                  {/* Footer */}
-                  <div className="w-full border-t border-slate-800/60 pt-5 flex items-end justify-between mt-auto">
-                    <div className="flex flex-col gap-1 text-[8.5px] font-mono text-slate-500 text-left max-w-[50%]">
-                      <span className="text-slate-400 font-black uppercase text-[8px]">REGISTRY TRACE MATRIX</span>
-                      <span className="truncate max-w-[280px] text-slate-400 font-semibold">VERIFICATION_HASH: 0X{Math.random().toString(16).substring(2,28).toUpperCase()}</span>
-                      <span className="text-emerald-500 font-bold flex items-center gap-1">✓ SECURED BY INDEXEDDB CACHE LAYER</span>
-                    </div>
-
-                    {/* Signature Box */}
-                    <div className="flex flex-col items-center justify-end text-center min-w-[130px]">
-                      {digitalSignatureUrl ? (
-                        <img src={digitalSignatureUrl} alt="Signature" className="h-9 object-contain invert brightness-200 mb-1" />
-                      ) : (
-                        <div className="h-7 border-b border-indigo-400/50 w-24 mb-1 flex items-center justify-center text-[9px] font-serif italic text-indigo-300">
-                          {signatoryName}
-                        </div>
-                      )}
-                      <span className="text-[9px] font-bold text-white uppercase font-sans block leading-none">{signatoryName}</span>
-                      <span className="text-[7px] text-slate-400 uppercase font-mono block mt-0.5">{signatoryRole}</span>
-                    </div>
-                    
-                    {/* QR Box */}
-                    <div className="flex flex-col items-center p-1.5 bg-white rounded-xl shadow-2xl border border-slate-200">
-                      {qrDataUrl && <img src={qrDataUrl} alt="Scan QR" className="block w-[50px] h-[50px] rounded" />}
-                      <span className="text-[5px] font-sans font-black text-slate-600 uppercase mt-1">SCAN PREVIEW</span>
-                    </div>
-                  </div>
-
-                </div>
-              </div>
-
-            </div>
-          </div>
+          <CertificateModal
+            selectedStudent={selectedStudent}
+            certLang={certLang}
+            setCertLang={setCertLang}
+            orgDisplayName={orgDisplayName}
+            companyLogoUrl={companyLogoUrl}
+            digitalSignatureUrl={digitalSignatureUrl}
+            signatoryName={signatoryName}
+            signatoryRole={signatoryRole}
+            qrDataUrl={qrDataUrl}
+            certRef={certRef}
+            onDownloadSinglePNG={downloadSinglePNG}
+            onClose={() => {
+              setShowPreviewModal(false);
+              setSelectedStudent(null);
+            }}
+          />
         )}
 
       </div>
