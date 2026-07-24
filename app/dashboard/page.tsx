@@ -492,7 +492,7 @@ export default function DashboardPage() {
 
   return (
     <div className="w-full min-h-screen bg-slate-950 flex flex-col justify-center items-center font-sans relative text-slate-800 antialiased overflow-x-hidden pb-12">
-      <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="beforeInteractive" />
+      
 
       {isProcessing && progressStatus && (
         <div className="fixed bottom-6 right-6 bg-slate-900 border border-indigo-500/30 text-white p-4 rounded-xl shadow-2xl flex items-center gap-3 z-50 animate-bounce">

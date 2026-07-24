@@ -216,28 +216,19 @@ export default function LandingPage() {
       </section>
 
       {/* 🔒 Security & Trust Banner */}
-      <section id="security" className="w-full max-w-6xl mx-auto px-6 py-12">
-        <div className="p-10 bg-gradient-to-r from-indigo-950/60 via-slate-900 to-indigo-950/60 border border-indigo-500/30 rounded-3xl flex flex-col md:flex-row justify-between items-center gap-8 shadow-2xl">
-          <div className="space-y-2 text-center md:text-left">
-            <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5 justify-center md:justify-start">
-              <CheckCircle2 className="w-4 h-4" /> Ready for High Volume Batches
-            </span>
-            <h3 className="text-2xl md:text-3xl font-black text-white uppercase">
-              Start Minting Certificates Free
-            </h3>
-            <p className="text-xs text-slate-400 max-w-xl">
-              Access the complete client terminal with pre-loaded trial credits and full export capability.
-            </p>
-          </div>
-          <Link
-            href="/dashboard"
-            className="px-8 py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs uppercase tracking-wider rounded-2xl shadow-lg shadow-indigo-600/30 transition active:scale-95 whitespace-nowrap"
-          >
-            Access Dashboard Terminal
-          </Link>
-        </div>
-      </section>
-
+<section id="security" className="w-full max-w-6xl mx-auto px-6 py-12">
+  <div className="p-10 bg-gradient-to-r from-indigo-950/60 via-slate-900 to-indigo-950/60 border border-indigo-500/30 rounded-3xl flex flex-col items-center text-center gap-3 shadow-2xl">
+    <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5 justify-center">
+      <CheckCircle2 className="w-4 h-4" /> Ready for High Volume Batches
+    </span>
+    <h3 className="text-2xl md:text-3xl font-black text-white uppercase">
+      Start Minting Certificates Free
+    </h3>
+    <p className="text-xs text-slate-400 max-w-xl">
+      Access the complete client terminal with pre-loaded trial credits and full export capability.
+    </p>
+  </div>
+</section>
       {/* 🔒 Footer */}
       <footer className="w-full border-t border-slate-800/80 bg-slate-950 mt-12">
         <div className="max-w-7xl mx-auto px-6 py-12 flex flex-col md:flex-row justify-between items-center gap-6">
