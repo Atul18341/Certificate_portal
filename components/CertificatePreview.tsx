@@ -1,9 +1,12 @@
 'use client';
 
-import React from 'react';
-import { Download, X } from 'lucide-react';
-import LinkedInButton from "@/components/LinkedInButton";
+import React, { useState } from 'react';
+import { Download, FileText, X, ShieldCheck, Award } from 'lucide-react';
 import { CERT_TEXTS } from '@/app/lib/translations';
+import { toPng } from 'html-to-image'; // 👈 Modern HTML to Image Engine
+import { jsPDF } from 'jspdf';
+import LinkedInButton from "@/components/LinkedInButton";
+
 interface StudentData {
   id: string;
   name: string;
@@ -14,8 +17,8 @@ interface StudentData {
 
 export interface CertificatePreviewProps {
   selectedStudent: StudentData;
-  certLang: 'en' | 'hi';
-  setCertLang: (lang: 'en' | 'hi') => void;
+  certLang: 'en' | 'hi' | 'es' | 'fr' | 'de' | 'ta' | 'te';
+  setCertLang: (lang: any) => void;
   orgDisplayName: string;
   companyLogoUrl: string;
   digitalSignatureUrl: string;
@@ -41,41 +44,87 @@ export default function CertificatePreview({
   onDownloadSinglePNG,
   onClose,
 }: CertificatePreviewProps) {
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
+
+  // 📄 Reliable PDF Exporter using html-to-image
+  const handleDownloadPDF = async () => {
+    if (!certRef.current) return;
+    try {
+      setIsExportingPdf(true);
+
+      // DOM to PNG conversion (Handles lab/oklch colors & CORS automatically)
+      const dataUrl = await toPng(certRef.current, {
+        quality: 0.95,
+        pixelRatio: 2, // High DPI for crisp printing
+        backgroundColor: '#ffffff',
+        cacheBust: true,
+      });
+
+      const pdf = new jsPDF({
+        orientation: 'landscape',
+        unit: 'mm',
+        format: 'a4',
+      });
+
+      pdf.addImage(dataUrl, 'PNG', 0, 0, 297, 210);
+      pdf.save(`${selectedStudent.name.replace(/\s+/g, '_')}_Certificate.pdf`);
+    } catch (error) {
+      console.error('PDF Export Error:', error);
+      alert('Failed to generate PDF. Make sure all images are fully loaded.');
+    } finally {
+      setIsExportingPdf(false);
+    }
+  };
+
+  const currentText = (CERT_TEXTS as any)[certLang] || (CERT_TEXTS as any).en;
+
   return (
-    <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center z-50 p-4 overflow-y-auto animate-fade-in">
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-[850px] p-6 text-white shadow-2xl relative">
-        
-        {/* Header Bar */}
-        <div className="flex justify-between items-center border-b border-slate-800 pb-4 mb-5">
-          <div>
-            <h4 className="text-sm font-bold">Dynamic Offline Inspection Engine</h4>
-            <p className="text-[11px] text-slate-400 mt-0.5">
-              Target: <span className="text-white font-mono font-bold">{selectedStudent.name}</span>
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <select
-  value={certLang}
-  onChange={(e) => setCertLang(e.target.value as any)}
-  className="bg-slate-800 text-white text-xs font-bold px-3 py-2 rounded-xl border border-slate-700 outline-none cursor-pointer"
->
-  <option value="en">🌐 English</option>
-  <option value="hi">🇮🇳 हिंदी (Hindi)</option>
-  <option value="es">🇪🇸 Español (Spanish)</option>
-  <option value="fr">🇫🇷 Français (French)</option>
-  <option value="de">🇩🇪 Deutsch (German)</option>
-  <option value="ta">🇮🇳 தமிழ் (Tamil)</option>
-  <option value="te">🇮🇳 తెలుగు (Telugu)</option>
-</select>
+    <div className="w-full lg:w-1/2 h-full bg-slate-900 border-l border-slate-800 p-4 sm:p-6 text-white flex flex-col justify-between shadow-2xl relative animate-fade-in">
+      
+      {/* Drawer Control Bar */}
+      <div className="flex flex-wrap items-center justify-between border-b border-slate-800 pb-4 mb-4 gap-2 shrink-0">
+        <div>
+          <h4 className="text-xs font-bold flex items-center gap-1.5 text-slate-200">
+            <Award className="w-4 h-4 text-indigo-400" /> Live Canvas Inspection
+          </h4>
+          <p className="text-[10px] text-slate-400 mt-0.5">
+            Active: <span className="text-white font-mono font-bold">{selectedStudent.name}</span>
+          </p>
+        </div>
 
-            <button 
-              type="button" 
-              onClick={() => onDownloadSinglePNG(selectedStudent)} 
-              className="px-4 py-2 bg-indigo-600 text-white text-xs font-black rounded-xl flex items-center gap-1.5 shadow transition active:scale-95 cursor-pointer"
-            >
-              <Download className="w-3.5 h-3.5" /> Download Asset (PNG)
-            </button>
+        <div className="flex items-center gap-2">
+          <select
+            value={certLang}
+            onChange={(e) => setCertLang(e.target.value)}
+            className="bg-slate-800 text-white text-[11px] font-bold px-2.5 py-1.5 rounded-lg border border-slate-700 outline-none cursor-pointer"
+          >
+            <option value="en">🌐 English</option>
+            <option value="hi">🇮🇳 हिंदी</option>
+            <option value="es">🇪🇸 Español</option>
+            <option value="fr">🇫🇷 Français</option>
+            <option value="de">🇩🇪 Deutsch</option>
+            <option value="ta">🇮🇳 தமிழ்</option>
+            <option value="te">🇮🇳 తెలుగు</option>
+          </select>
 
+          <button 
+            type="button" 
+            onClick={handleDownloadPDF} 
+            disabled={isExportingPdf}
+            className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-[11px] font-bold rounded-lg flex items-center gap-1 shadow transition cursor-pointer"
+          >
+            <FileText className="w-3.5 h-3.5" /> {isExportingPdf ? 'PDF...' : 'PDF'}
+          </button>
+
+          <button 
+            type="button" 
+            onClick={() => onDownloadSinglePNG(selectedStudent)} 
+            className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-bold rounded-lg flex items-center gap-1 shadow transition cursor-pointer"
+          >
+            <Download className="w-3.5 h-3.5" /> PNG
+          </button>
+
+          {LinkedInButton && (
             <LinkedInButton
               certificateTitle={selectedStudent.course}
               organizationName={orgDisplayName}
@@ -84,91 +133,113 @@ export default function CertificatePreview({
               certificateId={selectedStudent.id}
               certificateUrl={`https://credvantage.com/verify/${encodeURIComponent(selectedStudent.id)}`}
             />
+          )}
 
-            <button 
-              type="button" 
-              onClick={onClose} 
-              className="p-2 bg-slate-800 text-slate-400 rounded-xl hover:text-white cursor-pointer"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
+          <button 
+            type="button" 
+            onClick={onClose} 
+            className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white rounded-lg cursor-pointer transition"
+            title="Close Drawer"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
-
-        {/* Certificate Display Card */}
-        <div className="w-full bg-slate-950 p-6 rounded-2xl flex justify-center items-center border border-slate-800">
-          <div ref={certRef} className="relative w-full aspect-[1.414/1] bg-slate-900 p-[8%] border border-slate-800 flex flex-col justify-between items-center text-white shadow-2xl">
-            
-            {/* Certificate Header */}
-            <div className="w-full flex justify-between items-start border-b border-slate-800/60 pb-5">
-              <div className="text-left flex items-center gap-3">
-                {companyLogoUrl && <img src={companyLogoUrl} alt="Logo" className="h-9 max-w-[120px] object-contain" />}
-                <div>
-                  <h4 className="text-[11px] font-black tracking-[0.2em] text-indigo-400 uppercase">{orgDisplayName}</h4>
-                  <p className="text-[8px] font-mono text-slate-500 mt-0.5">OFFICIAL RECIPIENT VERIFICATION NODE</p>
-                </div>
-              </div>
-              <div className="bg-indigo-950/40 border border-indigo-500/30 px-3 py-1.5 rounded-lg text-indigo-300 font-mono text-[9px] font-bold">
-                ID // <span className="text-white font-black">{selectedStudent.id}</span>
-              </div>
-            </div>
-
-            {/* Certificate Body */}
-            <div className="w-full text-center flex flex-col items-center my-auto py-6">
-              <span className="text-[9px] font-black uppercase tracking-[0.35em] text-indigo-400 bg-indigo-950/50 px-3 py-1 rounded-full border border-indigo-500/20">
-                {CERT_TEXTS[certLang].attestation}
-              </span>
-              <h1 className="text-3xl md:text-4xl lg:text-5xl font-serif text-white mt-4 font-extralight leading-none">
-                {CERT_TEXTS[certLang].heading}
-              </h1>
-              
-              <div className="w-12 h-[1px] bg-slate-800 my-6"></div>
-              
-              <p className="text-xs italic font-serif text-slate-400">
-                {CERT_TEXTS[certLang].subheading}
-              </p>
-              <h2 className="text-2xl md:text-3xl lg:text-4xl tracking-tight text-white mt-3.5 font-bold font-sans">{selectedStudent.name}</h2>
-              
-              <p className="text-xs font-serif text-slate-400 mt-6 max-w-md mx-auto leading-relaxed">
-                {CERT_TEXTS[certLang].body}
-              </p>
-              <h3 className="text-xs md:text-sm font-black text-indigo-200 mt-3.5 tracking-wider uppercase font-sans bg-slate-950 border border-slate-800 px-4 py-2 rounded-xl shadow-sm">{selectedStudent.course}</h3>
-            </div>
-
-            {/* Certificate Footer */}
-            <div className="w-full border-t border-slate-800/60 pt-5 flex items-end justify-between mt-auto">
-              <div className="flex flex-col gap-1 text-[8.5px] font-mono text-slate-500 text-left max-w-[50%]">
-                <span className="text-slate-400 font-black uppercase text-[8px]">REGISTRY TRACE MATRIX</span>
-                <span className="truncate max-w-[280px] text-slate-400 font-semibold">
-                  VERIFICATION_HASH: 0X{Math.random().toString(16).substring(2,28).toUpperCase()}
-                </span>
-                <span className="text-emerald-500 font-bold flex items-center gap-1">✓ SECURED BY INDEXEDDB CACHE LAYER</span>
-              </div>
-
-              {/* Signature Box */}
-              <div className="flex flex-col items-center justify-end text-center min-w-[130px]">
-                {digitalSignatureUrl ? (
-                  <img src={digitalSignatureUrl} alt="Signature" className="h-9 object-contain invert brightness-200 mb-1" />
-                ) : (
-                  <div className="h-7 border-b border-indigo-400/50 w-24 mb-1 flex items-center justify-center text-[9px] font-serif italic text-indigo-300">
-                    {signatoryName}
-                  </div>
-                )}
-                <span className="text-[9px] font-bold text-white uppercase font-sans block leading-none">{signatoryName}</span>
-                <span className="text-[7px] text-slate-400 uppercase font-mono block mt-0.5">{signatoryRole}</span>
-              </div>
-              
-              {/* QR Box */}
-              <div className="flex flex-col items-center p-1.5 bg-white rounded-xl shadow-2xl border border-slate-200">
-                {qrDataUrl && <img src={qrDataUrl} alt="Scan QR" className="block w-[50px] h-[50px] rounded" />}
-                <span className="text-[5px] font-sans font-black text-slate-600 uppercase mt-1">SCAN PREVIEW</span>
-              </div>
-            </div>
-
-          </div>
-        </div>
-
       </div>
+
+      {/* Certificate Scrollable Canvas */}
+      <div className="w-full bg-slate-950 p-3 rounded-xl flex justify-center items-center border border-slate-800 overflow-auto flex-1">
+        <div 
+          ref={certRef} 
+          className="relative w-full min-w-[580px] aspect-[1.414/1] bg-white p-6 border-[8px] border-slate-100 flex flex-col justify-between items-center text-slate-900 shadow-2xl selection:bg-amber-100"
+          style={{
+            backgroundImage: 'radial-gradient(#e2e8f0 0.75px, transparent 0.75px)',
+            backgroundSize: '14px 14px'
+          }}
+        >
+          <div className="absolute inset-2 border border-slate-900/80 pointer-events-none"></div>
+          <div className="absolute inset-3 border border-slate-300/60 pointer-events-none"></div>
+
+          {/* Header */}
+          <div className="w-full flex justify-between items-center pt-1 px-2 z-10">
+            <div className="flex items-center gap-2">
+              {companyLogoUrl ? (
+                <img src={companyLogoUrl} alt="Logo" className="h-8 max-w-[100px] object-contain" />
+              ) : (
+                <div className="p-1.5 bg-indigo-50 border border-indigo-200 rounded">
+                  <ShieldCheck className="w-4 h-4 text-indigo-700" />
+                </div>
+              )}
+              <div className="text-left">
+                <h4 className="text-[10px] font-black tracking-[0.2em] text-slate-900 uppercase font-sans">{orgDisplayName}</h4>
+                <p className="text-[7px] font-mono text-slate-500">OFFICIAL RECIPIENT NODE</p>
+              </div>
+            </div>
+
+            <div className="bg-slate-50 border border-slate-200 px-2 py-1 rounded text-slate-700 font-mono text-[8px] font-bold">
+              ID: <span className="text-slate-900 font-black">{selectedStudent.id}</span>
+            </div>
+          </div>
+
+          {/* Body */}
+          <div className="w-full text-center flex flex-col items-center my-auto py-1 z-10">
+            <span className="text-[8px] font-black uppercase tracking-[0.3em] text-amber-700 bg-amber-50 px-3 py-0.5 rounded-full border border-amber-200 font-sans">
+              {currentText?.attestation || 'CERTIFICATE OF ACHIEVEMENT'}
+            </span>
+
+            <h1 className="text-2xl sm:text-3xl font-serif text-slate-900 mt-2 font-normal tracking-tight">
+              {currentText?.heading || 'Certificate of Excellence'}
+            </h1>
+            
+            <div className="w-12 h-[1.5px] bg-amber-500 my-2"></div>
+            
+            <p className="text-[10px] italic font-serif text-slate-600">
+              {currentText?.subheading || 'This is proudly presented to'}
+            </p>
+
+            <h2 className="text-xl sm:text-2xl tracking-tight text-slate-900 mt-1 font-bold font-serif underline decoration-amber-400/60 decoration-1 underline-offset-4">
+              {selectedStudent.name}
+            </h2>
+            
+            <p className="text-[10px] font-serif text-slate-600 mt-3 max-w-xs mx-auto leading-relaxed">
+              {currentText?.body || 'For successful completion of the prescribed program requirements.'}
+            </p>
+
+            <h3 className="text-[10px] font-black text-indigo-900 mt-2 tracking-wider uppercase font-sans bg-indigo-50 border border-indigo-100 px-3 py-1 rounded shadow-sm">
+              {selectedStudent.course}
+            </h3>
+          </div>
+
+          {/* Footer */}
+          <div className="w-full pt-2 px-2 flex items-end justify-between mt-auto z-10">
+            <div className="flex flex-col gap-0.5 text-[7px] font-mono text-slate-500 text-left max-w-[38%]">
+              <span className="text-slate-700 font-black uppercase text-[6.5px]">TRACE MATRIX</span>
+              <span className="truncate text-slate-500">
+                HASH: 0X{Math.random().toString(16).substring(2, 22).toUpperCase()}
+              </span>
+              <span className="text-emerald-700 font-bold">✓ VERIFIED ON INDEXEDDB</span>
+            </div>
+
+            <div className="flex flex-col items-center justify-end text-center min-w-[110px]">
+              {digitalSignatureUrl ? (
+                <img src={digitalSignatureUrl} alt="Signature" className="h-8 object-contain mb-0.5" />
+              ) : (
+                <div className="h-6 border-b border-slate-300 w-20 mb-0.5 flex items-center justify-center text-[9px] font-serif italic text-slate-600">
+                  {signatoryName}
+                </div>
+              )}
+              <span className="text-[8.5px] font-black text-slate-900 uppercase font-sans block leading-none">{signatoryName}</span>
+              <span className="text-[6.5px] text-slate-500 uppercase font-mono block mt-0.5">{signatoryRole}</span>
+            </div>
+            
+            <div className="flex flex-col items-center p-1 bg-white rounded shadow-sm border border-slate-200">
+              {qrDataUrl && <img src={qrDataUrl} alt="QR" className="block w-[38px] h-[38px] rounded" />}
+              <span className="text-[5px] font-sans font-black text-slate-600 uppercase mt-0.5">VERIFY</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
     </div>
   );
 }

@@ -1,4 +1,3 @@
-'use check-clean';
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -30,29 +29,23 @@ export default function DashboardPage() {
   const router = useRouter();
   const PUBLIC_RAZORPAY_KEY_ID = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || "rzp_test_1234567890abcdef"; 
 
-  // Multi-Tab Router: 'workspace' | 'billing' | 'settings'
   const [activeTab, setActiveTab] = useState<'workspace' | 'billing' | 'settings'>('workspace');
 
-  // Session State
   const [activeSession, setActiveSession] = useState<any>(null);
   const [isLoadingSession, setIsLoadingSession] = useState(true);
 
-  // Branding States
   const [orgDisplayName, setOrgDisplayName] = useState<string>('CRED-VANTAGE GLOBAL REGISTRY NETWORK');
   const [signatoryName, setSignatoryName] = useState<string>('Dr. A. P. Sharma');
   const [signatoryRole, setSignatoryRole] = useState<string>('Dean / Controller of Certification');
   const [digitalSignatureUrl, setDigitalSignatureUrl] = useState<string>('');
   const [companyLogoUrl, setCompanyLogoUrl] = useState<string>('');
 
-  // Certificate Language State
   const [certLang, setCertLang] = useState<'en' | 'hi'>('en');
 
-  // Subscriptions & Wallet Storage
   const [subscriptionTier, setSubscriptionTier] = useState<string>('15-Day Free Trial');
   const [daysRemaining, setDaysRemaining] = useState<number>(15);
   const [walletBalance, setWalletBalance] = useState<number>(5000.00); 
 
-  // Operational States
   const [selectedStudent, setSelectedStudent] = useState<StudentData | null>(null);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -61,7 +54,6 @@ export default function DashboardPage() {
   
   const certRef = useRef<HTMLDivElement>(null);
 
-  // Live Sync with IndexedDB
   const offlineStudents = useLiveQuery(() => db.students.toArray(), []);
   
   const studentsList: StudentData[] = (offlineStudents || []).map(s => ({
@@ -72,7 +64,6 @@ export default function DashboardPage() {
     status: s.status
   }));
 
-  // Load Saved Settings & Check Session
   useEffect(() => {
     const loadSettingsFromDB = async () => {
       const savedUser = await db.settings.get('cred_session');
@@ -107,7 +98,6 @@ export default function DashboardPage() {
     loadSettingsFromDB();
   }, [router]);
 
-  // Safe Off-screen QR Generator
   useEffect(() => {
     if (!selectedStudent) return;
 
@@ -177,7 +167,6 @@ export default function DashboardPage() {
     setActiveTab('workspace');
   };
 
-  // 📧 Email Dispatch Handler
   const handleSendBulkEmails = async () => {
     const validStudents = studentsList.filter(s => s.email && s.email.trim() !== '' && s.email.includes('@'));
 
@@ -221,7 +210,6 @@ export default function DashboardPage() {
     }
   };
 
-  // 🟢 Helper to dynamically load Razorpay script
   const loadRazorpaySDK = () => {
     return new Promise((resolve) => {
       if ((window as any).Razorpay) {
@@ -236,7 +224,6 @@ export default function DashboardPage() {
     });
   };
 
-  // Real User Wallet Top-Up via Razorpay
   const handleWalletTopUp = async (amount: number) => {
     setIsProcessing(true);
     setProgressStatus(`Initializing Razorpay Wallet Top-Up for ₹${amount}...`);
@@ -285,7 +272,6 @@ export default function DashboardPage() {
     }
   };
 
-  // Subscription Plan Purchase
   const handleSubscriptionPurchase = async (tierName: string, amount: number, durationDays: number) => {
     setIsProcessing(true);
     setProgressStatus(`Routing secure subscription parameters...`);
@@ -338,7 +324,6 @@ export default function DashboardPage() {
     }
   };
 
-  // 📊 Spreadsheet Import
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -357,7 +342,7 @@ export default function DashboardPage() {
           const nameKey = rowKeys.find(k => /name/i.test(k) || /student/i.test(k));
           const idKey = rowKeys.find(k => /id/i.test(k) || /roll/i.test(k));
           const courseKey = rowKeys.find(k => /course/i.test(k) || /subject/i.test(k));
-          const regionKey = rowKeys.find(k => /region/i.test(k) || /campus/i.test(k) || /branch/i.test(k) || /location/i.test(k)); // 👈 Region Auto-detector
+          const regionKey = rowKeys.find(k => /region/i.test(k) || /campus/i.test(k) || /branch/i.test(k) || /location/i.test(k));
           
           let emailKey = rowKeys.find(k => /email/i.test(k));
           if (!emailKey) {
@@ -384,7 +369,6 @@ export default function DashboardPage() {
             course: formattedData[0].course,
             email: formattedData[0].email,
             status: formattedData[0].status
-            
           });
         }
 
@@ -411,7 +395,7 @@ export default function DashboardPage() {
         scale: 2, 
         useCORS: true,
         allowTaint: true,
-        backgroundColor: '#0f172a',
+        backgroundColor: '#ffffff',
         logging: false,
         imageTimeout: 0
       });
@@ -456,7 +440,7 @@ export default function DashboardPage() {
             scale: 1.5, 
             useCORS: true, 
             allowTaint: true,
-            backgroundColor: '#0f172a',
+            backgroundColor: '#ffffff',
             logging: false
           });
           const imgData = canvas.toDataURL('image/png', 0.9).split(',')[1];
@@ -507,7 +491,7 @@ export default function DashboardPage() {
   const pendingCount = studentsList.filter(s => s.status === 'pending').length;
 
   return (
-    <div className="w-full min-h-screen bg-slate-950 flex flex-col justify-center items-center font-sans relative text-slate-800 antialiased overflow-x-hidden pb-12">
+    <div className="w-full min-h-screen bg-slate-950 flex flex-col justify-start items-center font-sans relative text-slate-800 antialiased overflow-x-hidden p-4 sm:p-6 pb-12">
       
       {isProcessing && progressStatus && (
         <div className="fixed bottom-6 right-6 bg-slate-900 border border-indigo-500/30 text-white p-4 rounded-xl shadow-2xl flex items-center gap-3 z-50 animate-bounce">
@@ -516,94 +500,96 @@ export default function DashboardPage() {
         </div>
       )}
 
-      <div className="w-full max-w-6xl min-h-screen bg-slate-50 p-6 flex flex-col gap-6 items-center text-slate-800 z-10">
-        {/* Header Bar Navigation */}
-        <div className="bg-white p-4 px-6 rounded-2xl border border-slate-200 shadow-sm w-full flex flex-col sm:flex-row justify-between items-center gap-4">
-          <div className="flex items-center gap-6">
-            <div>
-              <span className="text-xs font-bold uppercase text-slate-400 tracking-wider">Client Workspace</span>
-              <h3 className="text-base font-black text-slate-900 leading-none mt-1">{activeSession?.company || 'Organization Terminal'}</h3>
-            </div>
-            
-            <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200">
-              <button 
-                type="button" 
-                onClick={() => setActiveTab('workspace')} 
-                className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${activeTab === 'workspace' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}
-              >
-                Registry Deck
-              </button>
-              <button 
-                type="button" 
-                onClick={() => setActiveTab('billing')} 
-                className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer ${activeTab === 'billing' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}
-              >
-                <CreditCard className="w-3 h-3" /> Wallet & Subscriptions
-              </button>
-              <button 
-                type="button" 
-                onClick={() => setActiveTab('settings')} 
-                className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer ${activeTab === 'settings' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}
-              >
-                <Settings className="w-3 h-3" /> Branding & Signature
-              </button>
-            </div>
+      {/* Header Navigation */}
+      <div className="bg-white p-4 px-6 rounded-2xl border border-slate-200 shadow-sm w-full max-w-[1600px] flex flex-col sm:flex-row justify-between items-center gap-4 mb-6 z-10">
+        <div className="flex items-center gap-6">
+          <div>
+            <span className="text-xs font-bold uppercase text-slate-400 tracking-wider">Client Workspace</span>
+            <h3 className="text-base font-black text-slate-900 leading-none mt-1">{activeSession?.company || 'Organization Terminal'}</h3>
           </div>
-
-          <div className="flex items-center gap-4">
-            <span className="text-xs font-black text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-200 flex items-center gap-1">
-              IndexedDB Active
-            </span>
-            <button onClick={handleSignOut} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-bold border border-slate-200 transition cursor-pointer">Sign Out</button>
+          
+          <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200">
+            <button 
+              type="button" 
+              onClick={() => setActiveTab('workspace')} 
+              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${activeTab === 'workspace' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}
+            >
+              Registry Deck
+            </button>
+            <button 
+              type="button" 
+              onClick={() => setActiveTab('billing')} 
+              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer ${activeTab === 'billing' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}
+            >
+              <CreditCard className="w-3 h-3" /> Wallet & Subscriptions
+            </button>
+            <button 
+              type="button" 
+              onClick={() => setActiveTab('settings')} 
+              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer ${activeTab === 'settings' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}
+            >
+              <Settings className="w-3 h-3" /> Branding & Signature
+            </button>
           </div>
         </div>
 
-        {/* TAB 1: WORKSPACE */}
-        {activeTab === 'workspace' && (
-          <WorkspaceTab
-            studentsList={studentsList}
-            currentCount={currentCount}
-            successCount={successCount}
-            pendingCount={pendingCount}
-            walletBalance={walletBalance}
-            isProcessing={isProcessing}
-            onSendBulkEmails={handleSendBulkEmails}
-            onDownloadAllZIP={downloadAllZIP}
-            onFileUpload={handleFileUpload}
-            onSelectStudent={(student) => {
-              setSelectedStudent(student);
-              setShowPreviewModal(true);
-            }}
-          />
-        )}
+        <div className="flex items-center gap-4">
+          <span className="text-xs font-black text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-200 flex items-center gap-1">
+            IndexedDB Active
+          </span>
+          <button onClick={handleSignOut} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-bold border border-slate-200 transition cursor-pointer">Sign Out</button>
+        </div>
+      </div>
 
-        {/* TAB 2: BILLING */}
-        {activeTab === 'billing' && (
-          <BillingTab
-            walletBalance={walletBalance}
-            subscriptionTier={subscriptionTier}
-            onWalletTopUp={handleWalletTopUp}
-            onSubscriptionPurchase={handleSubscriptionPurchase}
-          />
-        )}
+      {/* 🚀 SPLIT-SCREEN LAYOUT CONTAINER */}
+      <div className="w-full max-w-[1600px] min-h-[82vh] bg-slate-50 rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col lg:flex-row z-10">
+        
+        {/* LEFT PANEL: Workspace Roster / Billing / Settings */}
+        <div className={`transition-all duration-300 p-6 ${showPreviewModal && selectedStudent ? 'w-full lg:w-1/2 border-b lg:border-b-0 lg:border-r border-slate-200' : 'w-full'}`}>
+          {activeTab === 'workspace' && (
+            <WorkspaceTab
+              studentsList={studentsList}
+              currentCount={currentCount}
+              successCount={successCount}
+              pendingCount={pendingCount}
+              walletBalance={walletBalance}
+              isProcessing={isProcessing}
+              onSendBulkEmails={handleSendBulkEmails}
+              onDownloadAllZIP={downloadAllZIP}
+              onFileUpload={handleFileUpload}
+              onSelectStudent={(student) => {
+                setSelectedStudent(student);
+                setShowPreviewModal(true);
+              }}
+            />
+          )}
 
-        {/* TAB 3: BRANDING SETTINGS */}
-        {activeTab === 'settings' && (
-          <SettingsTab
-            orgDisplayName={orgDisplayName}
-            setOrgDisplayName={setOrgDisplayName}
-            signatoryName={signatoryName}
-            setSignatoryName={setSignatoryName}
-            signatoryRole={signatoryRole}
-            setSignatoryRole={setSignatoryRole}
-            companyLogoUrl={companyLogoUrl}
-            digitalSignatureUrl={digitalSignatureUrl}
-            onBrandingAssetUpload={handleBrandingAssetUpload}
-            onSaveBrandingSettings={handleSaveBrandingSettings}
-          />
-        )}
+          {activeTab === 'billing' && (
+            <BillingTab
+              walletBalance={walletBalance}
+              subscriptionTier={subscriptionTier}
+              onWalletTopUp={handleWalletTopUp}
+              onSubscriptionPurchase={handleSubscriptionPurchase}
+            />
+          )}
 
-        {/* CERTIFICATE PREVIEW MODAL */}
+          {activeTab === 'settings' && (
+            <SettingsTab
+              orgDisplayName={orgDisplayName}
+              setOrgDisplayName={setOrgDisplayName}
+              signatoryName={signatoryName}
+              setSignatoryName={setSignatoryName}
+              signatoryRole={signatoryRole}
+              setSignatoryRole={setSignatoryRole}
+              companyLogoUrl={companyLogoUrl}
+              digitalSignatureUrl={digitalSignatureUrl}
+              onBrandingAssetUpload={handleBrandingAssetUpload}
+              onSaveBrandingSettings={handleSaveBrandingSettings}
+            />
+          )}
+        </div>
+
+        {/* RIGHT PANEL: Live Side-Drawer Certificate Preview */}
         {showPreviewModal && selectedStudent && (
           <CertificateModal
             selectedStudent={selectedStudent}

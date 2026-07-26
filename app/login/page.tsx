@@ -32,7 +32,7 @@ export default function LoginPage() {
     }
 
     alert("🎉 Authentication successful! Redirecting to workspace...");
-    router.push('/');
+    router.push('/dashboard');
   };
 
   return (
