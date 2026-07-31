@@ -25,10 +25,10 @@ export default function LandingPage() {
             </div>
             <div>
               <span className="text-lg font-black text-white uppercase tracking-wider block leading-none">
-                CredVantage <span className="text-indigo-400">Pro</span>
+                Certibanao
               </span>
               <span className="text-[9px] text-slate-400 font-mono tracking-widest uppercase block mt-1">
-                Enterprise Credential Engine
+                Smart Blockchain powered Certificate Generation Platform.
               </span>
             </div>
           </div>
@@ -61,7 +61,7 @@ export default function LandingPage() {
       <section className="w-full max-w-6xl mx-auto px-6 pt-20 pb-16 flex flex-col items-center text-center my-auto">
         <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-indigo-950/80 border border-indigo-500/30 text-indigo-300 text-xs font-bold mb-8 shadow-inner">
           <Sparkles className="w-3.5 h-3.5 text-indigo-400 animate-pulse" /> 
-          <span>Next-Gen Bulk Certificate & Verification Platform</span>
+          <span>Smart Blockchain powered Certificate Generation Platform.</span>
         </div>
 
         <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black tracking-tight text-white leading-[1.1] max-w-4xl">
@@ -236,9 +236,13 @@ export default function LandingPage() {
             <div className="p-2 bg-indigo-600 rounded-xl">
               <ShieldCheck className="w-5 h-5 text-white" />
             </div>
-            <span className="text-base font-black text-white uppercase tracking-wider">
-              CredVantage Networks
+            <div className="text-base font-black text-white uppercase tracking-wider">
+              Certibanao<br/>
+              <span className="text-[9px] text-slate-400 font-mono tracking-widest uppercase block mt-1">
+              Smart Blockchain powered Certificate Generation Platform.
             </span>
+            </div>
+            
           </div>
 
           <div className="flex items-center gap-2 text-xs text-slate-500">
@@ -247,7 +251,7 @@ export default function LandingPage() {
           </div>
 
           <p className="text-xs text-slate-500">
-            © 2026 CredVantage Networks Inc. All rights reserved.
+            © 2026 Certibanao | Powered by <a href="https://lyss.in" target="_blank" className="text-indigo-400 font-bold">LYSS TECHNOLOGY PVT. LTD.</a> | All Rights Reserved
           </p>
         </div>
       </footer>

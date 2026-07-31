@@ -131,7 +131,7 @@ export default function CertificatePreview({
               issueYear={new Date().getFullYear()}
               issueMonth={new Date().getMonth() + 1}
               certificateId={selectedStudent.id}
-              certificateUrl={`https://credvantage.com/verify/${encodeURIComponent(selectedStudent.id)}`}
+              certificateUrl={`https://certibanao.com/verify/${encodeURIComponent(selectedStudent.id)}`}
             />
           )}
 
@@ -204,7 +204,7 @@ export default function CertificatePreview({
               {currentText?.body || 'For successful completion of the prescribed program requirements.'}
             </p>
 
-            <h3 className="text-[10px] font-black text-indigo-900 mt-2 tracking-wider uppercase font-sans bg-indigo-50 border border-indigo-100 px-3 py-1 rounded shadow-sm">
+            <h3 className="text-[10px] font-black text-indig/7o-900 mt-2 tracking-wider uppercase font-sans bg-indigo-50 border border-indigo-100 px-3 py-1 rounded shadow-sm">
               {selectedStudent.course}
             </h3>
           </div>

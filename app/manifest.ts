@@ -2,8 +2,8 @@ import { MetadataRoute } from 'next';
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'CredVantage Pro',
-    short_name: 'CredVantage',
+    name: 'Certibanao ',
+    short_name: 'Certibanao',
     description: 'Institutional Enterprise Grade Smart Registry Pipeline',
     start_url: '/',
     display: 'standalone',

@@ -14,12 +14,12 @@ export interface SettingsRecord {
   value: any;
 }
 
-export class CredVantageDatabase extends Dexie {
+export class CertibanaoDatabase extends Dexie {
   students!: Table<StudentRecord>;
   settings!: Table<SettingsRecord>;
 
   constructor() {
-    super('CredVantageOfflineDB');
+    super('Certibanao');
     this.version(1).stores({
       students: '++id, trackingId, name, course, status',
       settings: '&key'
@@ -27,4 +27,4 @@ export class CredVantageDatabase extends Dexie {
   }
 }
 
-export const db = new CredVantageDatabase();
+export const db = new CertibanaoDatabase();

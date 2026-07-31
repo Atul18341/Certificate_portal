@@ -15,13 +15,13 @@ const geistMono = Geist_Mono({
 
 // 📱 PWA Metadata Configuration
 export const metadata: Metadata = {
-  title: "CredVantage Pro",
-  description: "Institutional Enterprise Grade Smart Registry Pipeline",
+  title: "Certibanao",
+  description: "Smart Blockchain powered Certificate Generation Platform.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "CredVantage Pro",
+    title: "Certibanao Pro",
   },
   icons: {
     icon: "/icon-192.png",
