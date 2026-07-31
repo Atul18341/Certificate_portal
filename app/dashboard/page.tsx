@@ -1,4 +1,3 @@
-'use check-clean';
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -6,12 +5,13 @@ import { useRouter } from 'next/navigation';
 import * as XLSX from 'xlsx';
 import html2canvas from 'html2canvas';
 import JSZip from 'jszip';
-import { CreditCard, Settings } from 'lucide-react';
+import { CreditCard, Settings, Home } from 'lucide-react';
 
-import WorkspaceTab from "@/components/WorkspaceTab";
-import BillingTab from "@/components/billingtab";
-import SettingsTab from "@/components/settingstab";
-import CertificateModal from "@/components/CertificatePreview";
+
+import WorkspaceTab from "../../components/WorkspaceTab";
+import BillingTab from "../../components/billingtab";
+import SettingsTab from "../../components/settingstab";
+import CertificateModal from "../../components/CertificatePreview";
 
 import { db, StudentRecord } from '../lib/db';
 import { useLiveQuery } from 'dexie-react-hooks';
@@ -26,9 +26,49 @@ interface StudentData {
   status: 'pending' | 'success';
 }
 
+type WorkspaceTabProps = {
+  studentsList: StudentData[];
+  currentCount: number;
+  successCount: number;
+  pendingCount: number;
+  walletBalance: number;
+  isProcessing: boolean;
+  onSendBulkEmails: () => Promise<void>;
+  onDownloadAllZIP: () => Promise<void>;
+  onFileUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onSelectStudent: (student: StudentData) => void;
+};
+
+type BillingTabProps = {
+  walletBalance: number;
+  subscriptionTier: string;
+  onWalletTopUp: (amount: number) => Promise<void>;
+  onSubscriptionPurchase: (tierName: string, amount: number, durationDays: number) => Promise<void>;
+};
+
+type SettingsTabProps = {
+  orgDisplayName: string;
+  setOrgDisplayName: React.Dispatch<React.SetStateAction<string>>;
+  signatoryName: string;
+  setSignatoryName: React.Dispatch<React.SetStateAction<string>>;
+  signatoryRole: string;
+  setSignatoryRole: React.Dispatch<React.SetStateAction<string>>;
+  companyLogoUrl: string;
+  digitalSignatureUrl: string;
+  onBrandingAssetUpload: (e: React.ChangeEvent<HTMLInputElement>, target: 'logo' | 'signature') => void;
+  onSaveBrandingSettings: (e: React.FormEvent) => Promise<void>;
+};
+
+const TypedWorkspaceTab = WorkspaceTab as React.ComponentType<WorkspaceTabProps>;
+const TypedBillingTab = BillingTab as React.ComponentType<BillingTabProps>;
+const TypedSettingsTab = SettingsTab as React.ComponentType<SettingsTabProps>;
+
 export default function DashboardPage() {
   const router = useRouter();
   const PUBLIC_RAZORPAY_KEY_ID = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || "rzp_test_1234567890abcdef"; 
+
+  // 🟢 Toggle state between Public Landing Page & Dashboard App
+  const [showLanding, setShowLanding] = useState<boolean>(true);
 
   // Multi-Tab Router: 'workspace' | 'billing' | 'settings'
   const [activeTab, setActiveTab] = useState<'workspace' | 'billing' | 'settings'>('workspace');
@@ -69,6 +109,8 @@ export default function DashboardPage() {
     name: s.name,
     course: s.course,
     email: s.email,
+    region: (s as any).region || 'Global',
+    badgeUrl: (s as any).badgeUrl || '',
     status: s.status
   }));
 
@@ -78,7 +120,8 @@ export default function DashboardPage() {
       const savedUser = await db.settings.get('cred_session');
 
       if (!savedUser) {
-        router.push('/login');
+        // Session nahi milne par landing page hi dikhayega
+        setIsLoadingSession(false);
         return;
       }
 
@@ -221,7 +264,7 @@ export default function DashboardPage() {
     }
   };
 
-  // 🟢 Helper to dynamically load Razorpay script
+  // 🟢 Helper to dynamically load Razorpay SDK
   const loadRazorpaySDK = () => {
     return new Promise((resolve) => {
       if ((window as any).Razorpay) {
@@ -357,7 +400,7 @@ export default function DashboardPage() {
           const nameKey = rowKeys.find(k => /name/i.test(k) || /student/i.test(k));
           const idKey = rowKeys.find(k => /id/i.test(k) || /roll/i.test(k));
           const courseKey = rowKeys.find(k => /course/i.test(k) || /subject/i.test(k));
-          const regionKey = rowKeys.find(k => /region/i.test(k) || /campus/i.test(k) || /branch/i.test(k) || /location/i.test(k)); // 👈 Region Auto-detector
+          const regionKey = rowKeys.find(k => /region/i.test(k) || /campus/i.test(k) || /branch/i.test(k) || /location/i.test(k));
           
           let emailKey = rowKeys.find(k => /email/i.test(k));
           if (!emailKey) {
@@ -371,7 +414,7 @@ export default function DashboardPage() {
           const email = emailKey && row[emailKey] ? String(row[emailKey]).trim() : '';
           const region = regionKey && row[regionKey] ? String(row[regionKey]).trim() : 'Global';
 
-          return { trackingId, name, course, email, region, status: 'pending' as const };
+          return { trackingId, name, course, email, region, status: 'pending' as const } as any;
         });
 
         await db.students.clear();
@@ -383,8 +426,8 @@ export default function DashboardPage() {
             name: formattedData[0].name,
             course: formattedData[0].course,
             email: formattedData[0].email,
+            region: (formattedData[0] as any).region || 'Global',
             status: formattedData[0].status
-            
           });
         }
 
@@ -453,9 +496,9 @@ export default function DashboardPage() {
         
         if (certRef.current) {
           const canvas = await html2canvas(certRef.current, { 
-            scale: 1.5, 
+            scale: 2, 
             useCORS: true, 
-            allowTaint: true,
+            allowTaint: false,
             backgroundColor: '#0f172a',
             logging: false
           });
@@ -488,7 +531,7 @@ export default function DashboardPage() {
     await db.settings.delete('cred_session');
     setActiveSession(null);
     setSelectedStudent(null);
-    router.push('/login');
+    setShowLanding(true); // Return to landing page on sign out
   };
 
   if (isLoadingSession) {
@@ -502,10 +545,9 @@ export default function DashboardPage() {
     );
   }
 
-  const currentCount = studentsList.length;
-  const successCount = studentsList.filter(s => s.status === 'success').length;
-  const pendingCount = studentsList.filter(s => s.status === 'pending').length;
+ 
 
+  // 🟢 2. Main Workspace Dashboard Application
   return (
     <div className="w-full min-h-screen bg-slate-950 flex flex-col justify-center items-center font-sans relative text-slate-800 antialiased overflow-x-hidden pb-12">
       
@@ -550,11 +592,27 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
+            {/* Button to go back to Landing Page */}
+            <button
+              type="button"
+              onClick={() => setShowLanding(true)}
+              className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-bold flex items-center gap-1.5 border border-slate-200 transition cursor-pointer"
+            >
+              <Home className="w-3.5 h-3.5" /> Landing Page
+            </button>
+
             <span className="text-xs font-black text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-200 flex items-center gap-1">
               IndexedDB Active
             </span>
-            <button onClick={handleSignOut} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-bold border border-slate-200 transition cursor-pointer">Sign Out</button>
+
+            <button 
+              type="button"
+              onClick={handleSignOut} 
+              className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition cursor-pointer"
+            >
+              Sign Out
+            </button>
           </div>
         </div>
 
@@ -570,7 +628,7 @@ export default function DashboardPage() {
             onSendBulkEmails={handleSendBulkEmails}
             onDownloadAllZIP={downloadAllZIP}
             onFileUpload={handleFileUpload}
-            onSelectStudent={(student) => {
+            onSelectStudent={(student: StudentData) => {
               setSelectedStudent(student);
               setShowPreviewModal(true);
             }}
