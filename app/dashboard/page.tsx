@@ -5,12 +5,13 @@ import { useRouter } from 'next/navigation';
 import * as XLSX from 'xlsx';
 import html2canvas from 'html2canvas';
 import JSZip from 'jszip';
-import { CreditCard, Settings } from 'lucide-react';
+import { CreditCard, Settings, Scan } from 'lucide-react'; // 👈 Scan Icon Added
 
 import WorkspaceTab from "@/components/WorkspaceTab";
 import BillingTab from "@/components/billingtab";
 import SettingsTab from "@/components/settingstab";
 import CertificateModal from "@/components/CertificatePreview";
+import RegisterScannerModal from "@/components/RegisterScannerModal"; // 👈 Step 1: OCR Modal Imported
 
 import { db, StudentRecord } from '../lib/db';
 import { useLiveQuery } from 'dexie-react-hooks';
@@ -51,6 +52,9 @@ export default function DashboardPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [progressStatus, setProgressStatus] = useState<string>('');
   const [qrDataUrl, setQrDataUrl] = useState<string>('');
+
+  // 👈 Step 2: OCR State for Modal Open/Close
+  const [isOcrOpen, setIsOcrOpen] = useState(false);
   
   const certRef = useRef<HTMLDivElement>(null);
 
@@ -63,6 +67,37 @@ export default function DashboardPage() {
     email: s.email,
     status: s.status
   }));
+
+  // 👈 Step 2: Auto-scanned Names ko IndexedDB/Dexie me Save karne ka Logic
+  const handleAddScannedStudents = async (newStudents: { name: string; email: string; course: string }[]) => {
+    try {
+      const recordsToInsert: StudentRecord[] = newStudents.map((student) => ({
+        trackingId: 'CERT-' + Math.random().toString(36).substring(2, 9).toUpperCase(),
+        name: student.name,
+        course: student.course || 'General Certification',
+        email: student.email,
+        region: 'Global',
+        status: 'pending' as const,
+      }));
+
+      await db.students.bulkAdd(recordsToInsert);
+
+      if (recordsToInsert.length > 0 && !selectedStudent) {
+        setSelectedStudent({
+          id: recordsToInsert[0].trackingId,
+          name: recordsToInsert[0].name,
+          course: recordsToInsert[0].course,
+          email: recordsToInsert[0].email,
+          status: recordsToInsert[0].status,
+        });
+      }
+
+      alert(`🎉 Successfully imported ${newStudents.length} student(s) from physical register!`);
+    } catch (err) {
+      console.error('Error adding scanned students:', err);
+      alert('Failed to save scanned entries into database.');
+    }
+  };
 
   useEffect(() => {
     const loadSettingsFromDB = async () => {
@@ -533,7 +568,16 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
+          {/* 👈 Step 3: Top Navigation bar me Scan Physical Register Button */}
+          <button
+            type="button"
+            onClick={() => setIsOcrOpen(true)}
+            className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold shadow transition cursor-pointer flex items-center gap-1.5"
+          >
+            <Scan className="w-3.5 h-3.5" /> Scan Register
+          </button>
+
           <span className="text-xs font-black text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-200 flex items-center gap-1">
             IndexedDB Active
           </span>
@@ -611,6 +655,14 @@ export default function DashboardPage() {
         )}
 
       </div>
+
+      {/* 👈 Step 3: OCR Register Scanner Modal Container */}
+      <RegisterScannerModal
+        isOpen={isOcrOpen}
+        onClose={() => setIsOcrOpen(false)}
+        onAddStudents={handleAddScannedStudents}
+      />
+
     </div>
   );
 }
