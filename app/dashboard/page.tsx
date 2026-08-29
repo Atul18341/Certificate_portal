@@ -570,6 +570,7 @@ export default function DashboardPage() {
 
         <div className="flex items-center gap-3">
           {/* 👈 Step 3: Top Navigation bar me Scan Physical Register Button */}
+          {/*
           <button
             type="button"
             onClick={() => setIsOcrOpen(true)}
@@ -577,6 +578,7 @@ export default function DashboardPage() {
           >
             <Scan className="w-3.5 h-3.5" /> Scan Register
           </button>
+          */}
 
           <span className="text-xs font-black text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-200 flex items-center gap-1">
             IndexedDB Active

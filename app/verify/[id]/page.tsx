@@ -3,7 +3,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { ShieldCheck, AlertCircle } from 'lucide-react';
-import { db } from '@/app/lib/db';
 
 export default function VerifyPage() {
   const params = useParams();
@@ -12,21 +11,23 @@ export default function VerifyPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const checkCertificate = async () => {
+    async function verify() {
       if (!certId) return;
       try {
-        // Query Dexie IndexedDB directly
-        const record = await db.students.where('trackingId').equals(certId).first();
-        setStudent(record || null);
+        const res = await fetch(`/api/v1/verify/${encodeURIComponent(certId)}`);
+        const data = await res.json();
+        if (data.valid) {
+          setStudent(data.certificate);
+        } else {
+          setStudent(null);
+        }
       } catch (err) {
-        console.error('Dexie Query Error:', err);
         setStudent(null);
       } finally {
         setLoading(false);
       }
-    };
-
-    checkCertificate();
+    }
+    verify();
   }, [certId]);
 
   if (loading) {
@@ -46,7 +47,7 @@ export default function VerifyPage() {
               <ShieldCheck className="w-8 h-8" />
             </div>
             <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-emerald-400 bg-emerald-950 px-3 py-1 rounded-full border border-emerald-800">
-              Verified Credential
+              Official Verified Credential
             </span>
             <h2 className="text-2xl font-black mt-4 text-white">{student.name}</h2>
             <p className="text-xs text-slate-400 mt-1">{student.course}</p>
@@ -60,9 +61,9 @@ export default function VerifyPage() {
             <div className="p-3 bg-red-500/10 text-red-400 rounded-2xl w-fit mx-auto mb-4 border border-red-500/20">
               <AlertCircle className="w-8 h-8" />
             </div>
-            <h2 className="text-xl font-bold text-white">Invalid Certificate</h2>
+            <h2 className="text-xl font-bold text-white">Record Not Found</h2>
             <p className="text-xs text-slate-400 mt-2">
-              Record for ID <span className="font-mono text-amber-400">{certId}</span> was not found in the local registry.
+              Certificate ID <span className="font-mono text-amber-400">{certId}</span> was not found in the database.
             </p>
           </>
         )}
